@@ -19,14 +19,14 @@ type findRequest struct {
 }
 
 type findResponse struct {
-	BestRef      string                 `json:"best_ref"`
-	Confidence   string                 `json:"confidence"`
-	Score        float64                `json:"score"`
+	BestRef      string                  `json:"best_ref"`
+	Confidence   string                  `json:"confidence"`
+	Score        float64                 `json:"score"`
 	Matches      []semantic.ElementMatch `json:"matches"`
-	Strategy     string                 `json:"strategy"`
-	Threshold    float64                `json:"threshold"`
-	LatencyMs    int64                  `json:"latency_ms"`
-	ElementCount int                    `json:"element_count"`
+	Strategy     string                  `json:"strategy"`
+	Threshold    float64                 `json:"threshold"`
+	LatencyMs    int64                   `json:"latency_ms"`
+	ElementCount int                     `json:"element_count"`
 }
 
 // HandleFind performs semantic element matching against the accessibility

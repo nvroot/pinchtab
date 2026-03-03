@@ -18,9 +18,9 @@ import (
 //   - L2-normalized output for cosine similarity compatibility
 //   - Zero external dependencies — pure Go
 type HashingEmbedder struct {
-	dim       int // vector dimensionality
-	ngramMin  int // minimum character n-gram length
-	ngramMax  int // maximum character n-gram length
+	dim         int     // vector dimensionality
+	ngramMin    int     // minimum character n-gram length
+	ngramMax    int     // maximum character n-gram length
 	wordWeight  float32 // weight factor for word-level features
 	ngramWeight float32 // weight factor for n-gram features
 }

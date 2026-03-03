@@ -264,15 +264,15 @@ func studyCases() []studyCase {
 // studyHardCases returns 10 intentionally-challenging query/element pairs
 // designed to reveal differentiation between matchers:
 //
-//   Group A (query uses an abbreviation, 0 lexical word overlap):
-//     expects embedding to win via character n-gram similarity.
+//	Group A (query uses an abbreviation, 0 lexical word overlap):
+//	  expects embedding to win via character n-gram similarity.
 //
-//   Group B (query uses a paraphrase / synonym):
-//     expects both matchers to struggle, revealing the ceiling of
-//     surface-form-only matching.
+//	Group B (query uses a paraphrase / synonym):
+//	  expects both matchers to struggle, revealing the ceiling of
+//	  surface-form-only matching.
 //
-//   Group C (ambiguous — multiple equally-plausible elements):
-//     expects combined to win via score averaging.
+//	Group C (ambiguous — multiple equally-plausible elements):
+//	  expects combined to win via score averaging.
 func studyHardCases() []studyCase {
 	// Reuse page element sets from studyCases.
 	cases := studyCases()

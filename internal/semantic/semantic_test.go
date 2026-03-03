@@ -471,8 +471,8 @@ func TestHashingEmbedder_SimilarTexts(t *testing.T) {
 		t.Fatalf("Embed error: %v", err)
 	}
 
-	simSameWord := CosineSimilarity(vecs[0], vecs[1])   // share "submit"
-	simUnrelated := CosineSimilarity(vecs[0], vecs[2])   // no shared words
+	simSameWord := CosineSimilarity(vecs[0], vecs[1])  // share "submit"
+	simUnrelated := CosineSimilarity(vecs[0], vecs[2]) // no shared words
 
 	if simSameWord <= simUnrelated {
 		t.Errorf("texts sharing 'submit' should be more similar: same=%f, unrelated=%f",
@@ -485,9 +485,9 @@ func TestHashingEmbedder_SubwordSimilarity(t *testing.T) {
 
 	// Character n-grams should give nonzero similarity between "button" and "btn".
 	vecs, err := e.Embed([]string{
-		"button",  // full word
-		"btn",     // abbreviation – shares "bt" bigram via n-grams
-		"search",  // unrelated
+		"button", // full word
+		"btn",    // abbreviation – shares "bt" bigram via n-grams
+		"search", // unrelated
 	})
 	if err != nil {
 		t.Fatalf("Embed error: %v", err)
