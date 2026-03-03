@@ -28,6 +28,8 @@ jobs:
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    # Skip CI on draft PRs to reduce build costs during development
+    if: github.event.pull_request.draft == false
     outputs:
       go: ${{ steps.filter.outputs.go }}
     steps:
