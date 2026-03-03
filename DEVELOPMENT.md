@@ -14,10 +14,10 @@ git clone https://github.com/pinchtab/pinchtab.git
 cd pinchtab
 
 # 2. Setup (installs git hooks, downloads deps)
-make setup
+./setup.sh
 
 # 3. Build and run
-make build
+go build ./cmd/pinchtab
 ./pinchtab
 ```
 
@@ -32,10 +32,10 @@ git clone https://github.com/pinchtab/pinchtab.git
 cd pinchtab
 ```
 
-### 2. Run automated setup
+### 2. Run setup script
 
 ```bash
-make setup
+./setup.sh
 ```
 
 This will:
@@ -63,16 +63,13 @@ Git hooks automatically run on `git commit`. To manually check your code:
 
 ```bash
 # Format code
-make fmt
+gofmt -w .
 
 # Run linter
-make lint
+golangci-lint run
 
 # Run tests
-make test
-
-# All checks (format + lint + test)
-make check
+go test ./...
 ```
 
 ## Common Issues
@@ -81,7 +78,7 @@ make check
 
 Re-run setup:
 ```bash
-make install-hooks
+./scripts/install-hooks.sh
 ```
 
 Verify hooks installed:
@@ -102,7 +99,7 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 Run format before committing:
 ```bash
-make fmt
+gofmt -w .
 ```
 
 ### Tests failing locally
@@ -122,25 +119,27 @@ go test -run TestName ./...
 
 ```bash
 # All tests
-make test
+go test ./...
 
-# With coverage report
-make test-cover
-# Opens coverage.html in browser
-```
+# Verbose output
+go test -v ./...
 
-Or directly with Go:
-```bash
-go test ./...                    # All tests
-go test -v ./...                 # Verbose
-go test -run TestName ./...      # Specific test
+# Specific test
+go test -run TestName ./...
+
+# With coverage
+go test -cover ./...
+
+# Generate coverage report
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
 ```
 
 ## Code Style
 
-- **Format:** `gofmt` (automatic via git hook, or run `make fmt`)
-- **Lint:** `golangci-lint` (automatic via git hook, or run `make lint`)
-- **Tests:** Must pass (`make test`)
+- **Format:** `gofmt` (automatic via git hook, or run `gofmt -w .`)
+- **Lint:** `golangci-lint` (automatic via git hook, or run `golangci-lint run`)
+- **Tests:** Must pass (`go test ./...`)
 
 ## Git Workflow
 
@@ -151,8 +150,8 @@ git checkout -b feature/your-feature
 # 2. Make changes
 # ... edit files ...
 
-# 3. Check your work (optional, hooks will run on commit)
-make check
+# 3. Test your changes
+go test ./...
 
 # 4. Commit (git hooks run automatically: gofmt + lint)
 git commit -m "feat: description"
@@ -184,25 +183,30 @@ Validate docs: `./scripts/check-docs-json.sh`
 ## Useful Commands
 
 ```bash
-# Development
-make setup          # Setup dev environment (run once)
-make build          # Build pinchtab binary
-make run            # Build and run
-make fmt            # Format code
-make lint           # Run linter
-make test           # Run tests
-make test-cover     # Run tests with coverage
-make check          # Format + lint + test
-make clean          # Remove build artifacts
-make help           # Show all commands
+# Setup
+./setup.sh                       # Setup dev environment (run once)
+./scripts/install-hooks.sh       # Re-install git hooks
 
-# Direct Go commands
-gofmt -w .          # Format all files
-gofmt -l .          # List files that need formatting
-go test ./...       # Run all tests
-go test -v ./...    # Verbose tests
-go clean            # Clean build cache
-go get -u ./...     # Update dependencies
+# Build & Run
+go build ./cmd/pinchtab          # Build pinchtab binary
+go run ./cmd/pinchtab            # Build and run
+go clean                         # Clean build cache
+
+# Code Quality
+gofmt -w .                       # Format all files
+gofmt -l .                       # List files that need formatting
+golangci-lint run                # Run linter
+
+# Testing
+go test ./...                    # Run all tests
+go test -v ./...                 # Verbose output
+go test -run TestName ./...      # Specific test
+go test -cover ./...             # With coverage
+
+# Dependencies
+go mod download                  # Download dependencies
+go mod tidy                      # Clean up go.mod
+go get -u ./...                  # Update dependencies
 ```
 
 ## Getting Help

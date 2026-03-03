@@ -181,8 +181,8 @@ Want to contribute? See [DEVELOPMENT.md](DEVELOPMENT.md) for setup instructions.
 ```bash
 git clone https://github.com/pinchtab/pinchtab.git
 cd pinchtab
-make setup  # Installs git hooks, downloads deps
-make build  # Build pinchtab binary
+./setup.sh                  # Installs git hooks, downloads deps
+go build ./cmd/pinchtab     # Build pinchtab binary
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
