@@ -17,12 +17,11 @@ NC=$'\033[0m'
 # ── Commands ─────────────────────────────────────────────────────────
 # name:emoji:description
 COMMANDS=(
-  "check:🧪:Go + Dashboard checks"
+  "check:🧪:All checks (Go + Dashboard)"
   "  check go:🧪:Go only"
   "  check dashboard:🧪:Dashboard only"
-  "dev:🚀:Build & run with dashboard"
+  "build:🚀:Build & run server + dashboard"
   "doctor:🩺:Setup dev environment"
-  "dashboard:📦:Build dashboard"
   "security:🔒:Gosec security scan"
   "docs:📖:Validate docs JSON"
   "hooks:🪝:Install git hooks"
@@ -77,9 +76,8 @@ run_command() {
       echo ""
       exec bash scripts/check-dashboard.sh
       ;;
-    "dev")          exec bash scripts/dev.sh ;;
+    "build")        exec bash scripts/dev.sh ;;
     "doctor")       exec bash scripts/doctor.sh ;;
-    "dashboard")    exec bash scripts/build-dashboard.sh ;;
     "security")     exec bash scripts/check-gosec.sh ;;
     "docs")         exec bash scripts/check-docs-json.sh ;;
     "hooks")        exec bash scripts/install-hooks.sh ;;
