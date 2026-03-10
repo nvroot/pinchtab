@@ -368,7 +368,7 @@ func runRealworldSuite(t *testing.T, tc realworldTestCase) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err != nil {
@@ -385,19 +385,6 @@ func runRealworldSuite(t *testing.T, tc realworldTestCase) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-func snapshotRoles(t *testing.T, lite *LiteEngine, filter string) map[string]int {
-	t.Helper()
-	nodes, err := lite.Snapshot(context.Background(), filter)
-	if err != nil {
-		t.Fatalf("Snapshot(%q): %v", filter, err)
-	}
-	counts := make(map[string]int)
-	for _, n := range nodes {
-		counts[n.Role]++
-	}
-	return counts
-}
 
 func snapshotNodes(t *testing.T, lite *LiteEngine, filter string) []SnapshotNode {
 	t.Helper()
@@ -828,7 +815,7 @@ func TestRealworld_EmptyPage(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err != nil {
@@ -861,7 +848,7 @@ func TestRealworld_NonHTMLContentType(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err == nil {
@@ -880,7 +867,7 @@ func TestRealworld_HTTP404(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err == nil {
@@ -908,7 +895,7 @@ func TestRealworld_LargePagePerformance(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err != nil {
@@ -953,7 +940,7 @@ func TestRealworld_MultipleScriptTags(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err != nil {
@@ -989,7 +976,7 @@ func TestRealworld_InlineStyles(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err != nil {
@@ -1023,7 +1010,7 @@ func TestRealworld_ClickWorkflow(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 	nodes := snapshotNodes(t, lite, "interactive")
@@ -1063,7 +1050,7 @@ func TestRealworld_ClickLinkRecovery(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 	nodes := snapshotNodes(t, lite, "interactive")
@@ -1085,7 +1072,7 @@ func TestRealworld_TypeWorkflow(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 	nodes := snapshotNodes(t, lite, "interactive")

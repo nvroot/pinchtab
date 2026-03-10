@@ -37,7 +37,7 @@ func TestLiteEngine_Navigate(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	result, err := lite.Navigate(context.Background(), ts.URL)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestLiteEngine_Snapshot_All(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, err := lite.Navigate(context.Background(), ts.URL)
 	if err != nil {
@@ -88,7 +88,7 @@ func TestLiteEngine_Snapshot_Interactive(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 
@@ -113,7 +113,7 @@ func TestLiteEngine_Text(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 
@@ -134,7 +134,7 @@ func TestLiteEngine_Click(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 
@@ -160,7 +160,7 @@ func TestLiteEngine_Type(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 
@@ -183,7 +183,7 @@ func TestLiteEngine_Type(t *testing.T) {
 
 func TestLiteEngine_RefNotFound(t *testing.T) {
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	// No page loaded
 	_, err := lite.Snapshot(context.Background(), "")
@@ -216,7 +216,7 @@ func TestLiteEngine_ScriptStyleSkipped(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 	nodes, _ := lite.Snapshot(context.Background(), "")
@@ -240,7 +240,7 @@ func TestLiteEngine_AriaAttributes(t *testing.T) {
 	defer ts.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	_, _ = lite.Navigate(context.Background(), ts.URL)
 	nodes, _ := lite.Snapshot(context.Background(), "")
@@ -273,7 +273,7 @@ func TestLiteEngine_MultiTab(t *testing.T) {
 	defer ts2.Close()
 
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	res1, _ := lite.Navigate(context.Background(), ts1.URL)
 	res2, _ := lite.Navigate(context.Background(), ts2.URL)
@@ -309,7 +309,7 @@ func TestLiteEngine_Close(t *testing.T) {
 
 func TestLiteEngine_Capabilities(t *testing.T) {
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	caps := lite.Capabilities()
 	if len(caps) != 5 {
@@ -319,7 +319,7 @@ func TestLiteEngine_Capabilities(t *testing.T) {
 
 func TestLiteEngine_Name(t *testing.T) {
 	lite := NewLiteEngine()
-	defer lite.Close()
+	defer func() { _ = lite.Close() }()
 
 	if lite.Name() != "lite" {
 		t.Errorf("Name() = %q, want %q", lite.Name(), "lite")

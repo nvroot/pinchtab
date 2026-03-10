@@ -66,7 +66,7 @@ func (l *LiteEngine) Navigate(ctx context.Context, url string) (*NavigateResult,
 	if err != nil {
 		return nil, fmt.Errorf("lite navigate fetch: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		return nil, fmt.Errorf("lite navigate: HTTP %d from %s", resp.StatusCode, url)
