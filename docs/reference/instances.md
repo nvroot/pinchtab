@@ -20,6 +20,23 @@ pinchtab instances
 
 `pinchtab instances` is the simplest way to inspect the current fleet from the CLI.
 
+Response shape:
+
+```json
+[
+  {
+    "id": "inst_0a89a5bb",
+    "profileId": "prof_278be873",
+    "profileName": "instance-1741410000000",
+    "port": "9999",
+    "headless": false,
+    "status": "running"
+  }
+]
+```
+
+`GET /instances` returns a bare JSON array, not an envelope like `{"instances":[...]}`.
+
 ## Start An Instance
 
 ### `POST /instances/start`
@@ -49,23 +66,25 @@ Notes:
 
 ### `POST /instances/launch`
 
-Use `/instances/launch` when you want to launch by profile name or `profileId` through the compatibility route.
+`/instances/launch` is a compatibility alias for `/instances/start`.
 
 ```bash
 curl -X POST http://localhost:9867/instances/launch \
   -H "Content-Type: application/json" \
-  -d '{"name":"work","mode":"headed"}'
+  -d '{"profileId":"prof_278be873","mode":"headed"}'
 ```
 
 Request body:
 
-- `name`: optional profile name
-- `profileId`: optional profile ID
+- `profileId`: optional existing profile ID or existing profile name
 - `mode`: optional; `headed` or headless by default
 - `port`: optional
 - `extensionPaths`: optional array of extension paths
 
-Important: `/instances/launch` does not read a `headless` field. Use `mode:"headed"` when you want a headed browser.
+Important:
+
+- `/instances/launch` does not read a `headless` field. Use `mode:"headed"` when you want a headed browser.
+- `name` is no longer supported on `/instances/launch`. Create the profile first via `POST /profiles`, then use the returned `id` as `profileId`.
 
 ## Get One Instance
 
@@ -161,6 +180,8 @@ Notes:
 
 - there is no CLI attach command
 - attach is allowed only when enabled in config under `security.attach`
+- `security.attach.allowHosts` must allow the `cdpUrl` host
+- `allowHosts: ["*"]` is a documented, non-default, security-reducing override. It disables host allowlisting entirely and allows any reachable CDP host with an allowed scheme. Use it only on isolated, operator-controlled networks.
 
 ## Attach An Existing Bridge
 
@@ -176,6 +197,7 @@ curl -X POST http://localhost:9867/instances/attach-bridge \
 
 Notes:
 
-- `baseUrl` must point at a running PinchTab bridge and must not include a path
+- `baseUrl` must be a bare bridge origin; do not include credentials, query strings, fragments, or a path
 - the orchestrator performs a health check before registering it
 - `security.attach.allowHosts` must allow the bridge host
+- `allowHosts: ["*"]` is a documented, non-default, security-reducing override. It disables host allowlisting entirely and allows any reachable bridge host with an allowed scheme. Use it only on isolated, operator-controlled networks.

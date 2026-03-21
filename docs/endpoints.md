@@ -308,6 +308,8 @@ POST /instances/{id}/tab
 Notes:
 
 - `/instances/start` and `/instances/launch` use `mode`, not `headless`
+- `/instances/launch` is a compatibility alias over `/instances/start`
+- create profiles explicitly with `POST /profiles`; `name` is no longer supported on `/instances/launch`
 - `/profiles/{id}/start` uses `headless`
 - attach routes are gated by `security.attach`
 
@@ -347,6 +349,8 @@ Scheduler routes are only present when `scheduler.enabled` is true.
 ## Feature Gates
 
 Some endpoints are intentionally disabled unless the matching config allows them:
+
+These gates are not ordinary feature toggles. Enabling them is a documented, non-default, security-reducing choice that widens the control surface available to callers.
 
 - `/evaluate` and `/tabs/{id}/evaluate` -> `security.allowEvaluate`
 - `/download` and `/tabs/{id}/download` -> `security.allowDownload`

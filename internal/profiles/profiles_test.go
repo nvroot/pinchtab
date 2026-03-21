@@ -459,6 +459,21 @@ func TestProfileUpdateMeta(t *testing.T) {
 	}
 }
 
+func TestProfileUpdateMetaRejectsInvalidProfileName(t *testing.T) {
+	pm := NewProfileManager(t.TempDir())
+	mux := http.NewServeMux()
+	pm.RegisterHandlers(mux)
+
+	req := httptest.NewRequest(http.MethodPatch, "/profiles/meta", strings.NewReader(`{"name":"poc';calc","description":"x"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestProfileUpdateByIDCanClearMetadata(t *testing.T) {
 	pm := NewProfileManager(t.TempDir())
 	mux := http.NewServeMux()
@@ -493,6 +508,25 @@ func TestProfileUpdateByIDCanClearMetadata(t *testing.T) {
 	}
 	if profiles[0].Description != "" {
 		t.Errorf("expected empty description after clear, got %q", profiles[0].Description)
+	}
+}
+
+func TestProfileUpdateByIDRejectsInvalidRename(t *testing.T) {
+	pm := NewProfileManager(t.TempDir())
+	mux := http.NewServeMux()
+	pm.RegisterHandlers(mux)
+
+	if err := pm.Create("renameable"); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/profiles/"+profileID("renameable"), strings.NewReader(`{"name":"poc';calc"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
@@ -555,6 +589,7 @@ func TestValidateProfileName(t *testing.T) {
 		{"valid with numbers", "profile123", false, ""},
 		{"valid with underscore", "my_profile", false, ""},
 		{"valid with dots", "my.profile", false, ""},
+		{"valid with spaces", "Work Profile", false, ""},
 		{"valid single char", "a", false, ""},
 
 		// Empty name
@@ -574,6 +609,18 @@ func TestValidateProfileName(t *testing.T) {
 		{"forward slash suffix", "test/", true, "cannot contain '/'"},
 		{"backslash", "test\\profile", true, "cannot contain '/'"},
 		{"backslash prefix", "\\test", true, "cannot contain '/'"},
+		{"single quote", "poc';calc", true, "contains invalid character"},
+		{"semicolon", "poc;calc", true, "contains invalid character"},
+		{"pipe", "poc|calc", true, "contains invalid character"},
+		{"dollar", "poc$calc", true, "contains invalid character"},
+		{"backtick", "poc`calc", true, "contains invalid character"},
+		{"colon", "poc:calc", true, "contains invalid character"},
+		{"trailing dot", "poc.", true, "cannot end with '.'"},
+		{"leading whitespace", " profile", true, "cannot start or end with whitespace"},
+		{"trailing whitespace", "profile ", true, "cannot start or end with whitespace"},
+		{"reserved device name", "CON", true, "reserved device name"},
+		{"reserved device name with extension", "con.txt", true, "reserved device name"},
+		{"reserved printer name", "LPT1", true, "reserved device name"},
 
 		// Combined attacks
 		{"traversal with slash", "../../../etc/passwd", true, "cannot contain"},
@@ -608,6 +655,10 @@ func TestProfileCreateRejectsPathTraversal(t *testing.T) {
 		"../../etc/passwd",
 		"test/subdir",
 		"/absolute",
+		"poc';calc",
+		"bad|name",
+		"CON",
+		"con.txt",
 	}
 
 	for _, name := range badNames {
@@ -633,6 +684,10 @@ func TestProfileHandlerCreateRejectsPathTraversal(t *testing.T) {
 		{"path traversal ..", `{"name":"../malicious"}`, 400},
 		{"path traversal /", `{"name":"test/nested"}`, 400},
 		{"path traversal backslash", `{"name":"test\\nested"}`, 400},
+		{"powershell metacharacter", `{"name":"poc';calc"}`, 400},
+		{"reserved device name", `{"name":"CON"}`, 400},
+		{"trailing dot", `{"name":"bad."}`, 400},
+		{"leading whitespace", `{"name":" bad"}`, 400},
 		{"empty name", `{"name":""}`, 400},
 		{"valid name", `{"name":"valid-profile"}`, 200},
 	}
@@ -649,6 +704,30 @@ func TestProfileHandlerCreateRejectsPathTraversal(t *testing.T) {
 					tt.body, w.Code, tt.wantStatus, w.Body.String())
 			}
 		})
+	}
+}
+
+func TestProfileHandlerImportRejectsInvalidProfileName(t *testing.T) {
+	pm := NewProfileManager(t.TempDir())
+	mux := http.NewServeMux()
+	pm.RegisterHandlers(mux)
+
+	src := filepath.Join(t.TempDir(), "chrome-src")
+	if err := os.MkdirAll(filepath.Join(src, "Default"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "Default", "Preferences"), []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	body := fmt.Sprintf(`{"name":"poc';calc","sourcePath":%q}`, src)
+	req := httptest.NewRequest(http.MethodPost, "/profiles/import", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

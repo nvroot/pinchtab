@@ -148,6 +148,8 @@ func TestOrchestrator_Launch_RejectsPathTraversal(t *testing.T) {
 		{"backslash", "test\\nested", "cannot contain '/'"},
 		{"empty name", "", "cannot be empty"},
 		{"absolute path attempt", "../../../etc/passwd", "cannot contain"},
+		{"powershell metacharacter", "poc';calc", "contains invalid character"},
+		{"reserved windows device name", "CON", "reserved device name"},
 	}
 
 	for _, tt := range badNames {
@@ -178,6 +180,7 @@ func TestOrchestrator_Launch_AcceptsValidNames(t *testing.T) {
 		"with-dash",
 		"with_underscore",
 		"with.dot",
+		"Work Profile",
 		"CamelCase",
 		"123numeric",
 		"a",
@@ -433,6 +436,58 @@ func TestValidateAttachURL_RejectsBridgeBaseURLWithPath(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "must not include a path") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateAttachURL_RejectsBridgeBaseURLWithUserinfo(t *testing.T) {
+	o := NewOrchestratorWithRunner(t.TempDir(), &mockRunner{portAvail: true})
+	o.ApplyRuntimeConfig(&config.RuntimeConfig{
+		AttachEnabled:      true,
+		AttachAllowHosts:   []string{"10.0.0.8"},
+		AttachAllowSchemes: []string{"http"},
+	})
+
+	err := o.validateAttachURL("http://user:pass@10.0.0.8:9868")
+	if err == nil {
+		t.Fatal("expected error for attach bridge URL with userinfo")
+	}
+	if !strings.Contains(err.Error(), "must not include userinfo") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateAttachURL_RejectsBridgeBaseURLWithQueryOrFragment(t *testing.T) {
+	o := NewOrchestratorWithRunner(t.TempDir(), &mockRunner{portAvail: true})
+	o.ApplyRuntimeConfig(&config.RuntimeConfig{
+		AttachEnabled:      true,
+		AttachAllowHosts:   []string{"10.0.0.8"},
+		AttachAllowSchemes: []string{"http"},
+	})
+
+	for _, raw := range []string{
+		"http://10.0.0.8:9868?token=secret",
+		"http://10.0.0.8:9868#debug",
+	} {
+		err := o.validateAttachURL(raw)
+		if err == nil {
+			t.Fatalf("expected error for attach bridge URL %q", raw)
+		}
+		if !strings.Contains(err.Error(), "must not include query or fragment") {
+			t.Fatalf("unexpected error for %q: %v", raw, err)
+		}
+	}
+}
+
+func TestOrchestrator_AttachBridge_NormalizesBaseURL(t *testing.T) {
+	runner := &mockRunner{portAvail: true}
+	o := NewOrchestratorWithRunner(t.TempDir(), runner)
+
+	inst, err := o.AttachBridge("bridge1", "http://10.0.0.8:9868/?debug=1#frag", "bridge-token")
+	if err != nil {
+		t.Fatalf("AttachBridge failed: %v", err)
+	}
+	if inst.URL != "http://10.0.0.8:9868" {
+		t.Fatalf("URL = %q, want %q", inst.URL, "http://10.0.0.8:9868")
 	}
 }
 
