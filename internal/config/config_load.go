@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 )
 
@@ -157,18 +156,6 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
-}
-
-func envIntOr(key string, fallback int) int {
-	v := os.Getenv(key)
-	if v == "" {
-		return fallback
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil || n < 0 {
-		return fallback
-	}
-	return n
 }
 
 func finalizeProfileConfig(cfg *RuntimeConfig) {
@@ -424,9 +411,8 @@ func applyFileConfig(cfg *RuntimeConfig, fc *FileConfig) {
 	if fc.AutoSolver.LLMFallback != nil {
 		cfg.AutoSolver.LLMFallback = *fc.AutoSolver.LLMFallback
 	}
-	// External solver keys: env vars override config file.
-	cfg.AutoSolver.CapsolverKey = envOr("PINCHTAB_AUTOSOLVER_CAPSOLVER_KEY", fc.AutoSolver.External.CapsolverKey)
-	cfg.AutoSolver.TwoCaptchaKey = envOr("PINCHTAB_AUTOSOLVER_2CAPTCHA_KEY", fc.AutoSolver.External.TwoCaptchaKey)
+	cfg.AutoSolver.CapsolverKey = fc.AutoSolver.External.CapsolverKey
+	cfg.AutoSolver.TwoCaptchaKey = fc.AutoSolver.External.TwoCaptchaKey
 }
 
 // ApplyFileConfigToRuntime merges file configuration into an existing runtime

@@ -23,26 +23,6 @@ func TestEnvOr(t *testing.T) {
 	}
 }
 
-func TestEnvIntOr(t *testing.T) {
-	key := "PINCHTAB_TEST_INT"
-	fallback := 42
-
-	_ = os.Unsetenv(key)
-	if got := envIntOr(key, fallback); got != fallback {
-		t.Errorf("envIntOr() = %v, want %v", got, fallback)
-	}
-
-	_ = os.Setenv(key, "100")
-	if got := envIntOr(key, fallback); got != 100 {
-		t.Errorf("envIntOr() = %v, want %v", got, 100)
-	}
-
-	_ = os.Setenv(key, "invalid")
-	if got := envIntOr(key, fallback); got != fallback {
-		t.Errorf("envIntOr() = %v, want %v", got, fallback)
-	}
-}
-
 func TestLoadConfigDefaults(t *testing.T) {
 	clearConfigEnvVars(t)
 	// Point to non-existent config to test pure defaults
@@ -179,6 +159,9 @@ func TestConfigFileWithNestedValues(t *testing.T) {
 		"server": {
 			"port": "8888"
 		},
+		"instanceDefaults": {
+			"maxParallelTabs": 4
+		},
 		"multiInstance": {
 			"strategy": "explicit"
 		}
@@ -192,6 +175,9 @@ func TestConfigFileWithNestedValues(t *testing.T) {
 	// Config file values should be used
 	if cfg.Port != "8888" {
 		t.Errorf("config file Port = %v, want 8888", cfg.Port)
+	}
+	if cfg.MaxParallelTabs != 4 {
+		t.Errorf("config file MaxParallelTabs = %v, want 4", cfg.MaxParallelTabs)
 	}
 	if cfg.Strategy != "explicit" {
 		t.Errorf("config file Strategy = %v, want explicit", cfg.Strategy)

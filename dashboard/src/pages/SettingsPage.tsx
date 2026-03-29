@@ -17,6 +17,7 @@ import { OrchestrationSettingsSection } from "./settings/OrchestrationSettingsSe
 import { ProfilesSettingsSection } from "./settings/ProfilesSettingsSection";
 import { SecurityIdpiSettingsSection } from "./settings/SecurityIdpiSettingsSection";
 import { SecuritySettingsSection } from "./settings/SecuritySettingsSection";
+import { AutoSolverSettingsSection } from "./settings/AutoSolverSettingsSection";
 import {
   backendSaveNotice,
   sections,
@@ -113,6 +114,14 @@ function renderActiveSection(
       return (
         <TimeoutsSettingsSection
           backendConfig={options.backendConfig}
+          updateBackendSection={options.updateBackendSection}
+        />
+      );
+    case "autosolver":
+      return (
+        <AutoSolverSettingsSection
+          backendConfig={options.backendConfig}
+          backendState={options.backendState}
           updateBackendSection={options.updateBackendSection}
         />
       );

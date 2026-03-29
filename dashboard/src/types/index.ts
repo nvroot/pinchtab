@@ -140,6 +140,14 @@ export interface BackendTimeoutsConfig {
   waitNavMs: number;
 }
 
+export interface BackendAutoSolverConfig {
+  enabled: boolean;
+  maxAttempts: number;
+  solvers: string[];
+  llmProvider: string;
+  llmFallback: boolean;
+}
+
 export interface BackendConfig {
   server: BackendServerConfig;
   browser: BackendBrowserConfig;
@@ -148,6 +156,7 @@ export interface BackendConfig {
   profiles: BackendProfilesConfig;
   multiInstance: BackendMultiInstanceConfig;
   timeouts: BackendTimeoutsConfig;
+  autoSolver: BackendAutoSolverConfig;
 }
 
 export interface BackendConfigState {
@@ -228,6 +237,13 @@ export const defaultBackendConfig: BackendConfig = {
     shutdownSec: 10,
     waitNavMs: 1000,
   },
+  autoSolver: {
+    enabled: false,
+    maxAttempts: 8,
+    solvers: ["cloudflare", "semantic", "capsolver", "twocaptcha"],
+    llmProvider: "",
+    llmFallback: false,
+  },
 };
 
 export function normalizeBackendConfig(
@@ -284,6 +300,12 @@ export function normalizeBackendConfig(
     timeouts: {
       ...defaultBackendConfig.timeouts,
       ...(input?.timeouts ?? {}),
+    },
+    autoSolver: {
+      ...defaultBackendConfig.autoSolver,
+      ...(input?.autoSolver ?? {}),
+      solvers:
+        input?.autoSolver?.solvers ?? defaultBackendConfig.autoSolver.solvers,
     },
   };
 }
