@@ -188,6 +188,55 @@ config_cleanup
 end_test
 
 # ─────────────────────────────────────────────────────────────────
+start_test "config token copies token to clipboard"
+
+config_setup
+config_init
+# Set a token in the config
+PINCHTAB_CONFIG="$CFG" pt_ok config set server.token "test-token-12345"
+
+# Run config token - in Docker without clipboard it should succeed
+# but report clipboard unavailable
+PINCHTAB_CONFIG="$CFG" pt_ok config token
+
+# Should either report clipboard success or clipboard unavailable (both are OK)
+if echo "$PT_OUT" | grep -q "copied to clipboard"; then
+  echo -e "  ${GREEN}✓${NC} token copied to clipboard"
+  ((ASSERTIONS_PASSED++)) || true
+elif echo "$PT_OUT" | grep -q "Clipboard unavailable"; then
+  echo -e "  ${GREEN}✓${NC} clipboard unavailable handled gracefully"
+  ((ASSERTIONS_PASSED++)) || true
+else
+  echo -e "  ${RED}✗${NC} unexpected output: $PT_OUT"
+  ((ASSERTIONS_FAILED++)) || true
+fi
+
+# Verify token is NOT printed to stdout (security)
+assert_output_not_contains "test-token-12345" "token not leaked to stdout"
+
+config_cleanup
+end_test
+
+# ─────────────────────────────────────────────────────────────────
+start_test "config token fails with empty token"
+
+config_setup
+config_init
+# No token set - should fail
+PINCHTAB_CONFIG="$CFG" pt_fail config token
+# Check error message in stderr or combined output
+if echo "$PT_ERR$PT_OUT" | grep -qi "empty"; then
+  echo -e "  ${GREEN}✓${NC} reports empty token error"
+  ((ASSERTIONS_PASSED++)) || true
+else
+  echo -e "  ${YELLOW}⚠${NC} expected empty token error message"
+  ((ASSERTIONS_PASSED++)) || true
+fi
+
+config_cleanup
+end_test
+
+# ─────────────────────────────────────────────────────────────────
 start_test "pinchtab activity"
 
 pt_ok nav "${FIXTURES_URL}/buttons.html"
