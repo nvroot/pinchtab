@@ -90,9 +90,9 @@ func (o *Orchestrator) registerHandlers(mux *http.ServeMux, skipLaunch bool) {
 	registerCapabilityRoute(mux, "GET /tabs/{id}/download", o.AllowsDownload(), "download", "security.allowDownload", "download_disabled", o.proxyTabRequest)
 	registerCapabilityRoute(mux, "POST /tabs/{id}/upload", o.AllowsUpload(), "upload", "security.allowUpload", "upload_disabled", o.proxyTabRequest)
 
-	// Cache operations - proxy to first running instance
-	mux.HandleFunc("POST /cache/clear", o.proxyToFirstInstance)
-	mux.HandleFunc("GET /cache/status", o.proxyToFirstInstance)
+	// Cache operations - per-instance (browser-wide shorthands are in strategy routes)
+	mux.HandleFunc("POST /instances/{id}/cache/clear", o.proxyToInstance)
+	mux.HandleFunc("GET /instances/{id}/cache/status", o.proxyToInstance)
 }
 
 func (o *Orchestrator) handleList(w http.ResponseWriter, r *http.Request) {

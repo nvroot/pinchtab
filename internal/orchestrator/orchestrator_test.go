@@ -632,6 +632,31 @@ func TestValidateAttachURL_WildcardHost(t *testing.T) {
 	}
 }
 
+func TestOrchestrator_RegisterHandlers_CacheRoutes(t *testing.T) {
+	o := NewOrchestratorWithRunner(t.TempDir(), &mockRunner{portAvail: true})
+	o.ApplyRuntimeConfig(&config.RuntimeConfig{})
+
+	mux := http.NewServeMux()
+	o.RegisterHandlers(mux)
+
+	routes := []struct {
+		method string
+		path   string
+		route  string
+	}{
+		{"POST", "/instances/inst1/cache/clear", "POST /instances/{id}/cache/clear"},
+		{"GET", "/instances/inst1/cache/status", "GET /instances/{id}/cache/status"},
+	}
+
+	for _, rt := range routes {
+		req := httptest.NewRequest(rt.method, rt.path, nil)
+		_, pattern := mux.Handler(req)
+		if pattern != rt.route {
+			t.Errorf("expected route %q for %s %s, got %q", rt.route, rt.method, rt.path, pattern)
+		}
+	}
+}
+
 func TestOrchestrator_RegisterHandlers_LocksSensitiveRoutes(t *testing.T) {
 	o := NewOrchestratorWithRunner(t.TempDir(), &mockRunner{portAvail: true})
 	o.ApplyRuntimeConfig(&config.RuntimeConfig{})
