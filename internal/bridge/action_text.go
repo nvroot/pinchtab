@@ -69,12 +69,31 @@ func (b *Bridge) actionHumanType(ctx context.Context, req ActionRequest) (map[st
 	return map[string]any{"typed": req.Text, "human": true}, nil
 }
 
+// keyboardTypeThreshold is the character count above which we switch from
+// per-character key events to batched insertText for performance. Per-char
+// events cause timeouts on long strings (issue #413).
+const keyboardTypeThreshold = 20
+
 func (b *Bridge) actionKeyboardType(ctx context.Context, req ActionRequest) (map[string]any, error) {
 	if req.Text == "" {
 		return nil, fmt.Errorf("text required for keyboard-type")
 	}
+
+	// For long strings, use insertText to avoid timeout (issue #413).
+	// We still fire a keydown at the start and keyup at the end to trigger
+	// any key-event listeners that apps might depend on.
+	if len(req.Text) > keyboardTypeThreshold {
+		return b.keyboardTypeBatched(ctx, req.Text)
+	}
+
+	return b.keyboardTypePerChar(ctx, req.Text)
+}
+
+// keyboardTypePerChar dispatches individual keyDown/keyUp events for each character.
+// Used for short strings where per-character events are acceptable.
+func (b *Bridge) keyboardTypePerChar(ctx context.Context, text string) (map[string]any, error) {
 	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-		for _, ch := range req.Text {
+		for _, ch := range text {
 			s := string(ch)
 			params := map[string]any{
 				"type":           "keyDown",
@@ -110,7 +129,51 @@ func (b *Bridge) actionKeyboardType(ctx context.Context, req ActionRequest) (map
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"typed": req.Text}, nil
+	return map[string]any{"typed": text}, nil
+}
+
+// keyboardTypeBatchedEdgeChars is how many characters to type with real
+// key events at the start and end of a batched string.
+const keyboardTypeBatchedEdgeChars = 5
+
+// keyboardTypeBatched types the first and last few characters with real key
+// events, and uses Input.insertText for the middle portion. This provides
+// realistic keystroke simulation at boundaries while avoiding CDP timeouts
+// on long strings (issue #413).
+func (b *Bridge) keyboardTypeBatched(ctx context.Context, text string) (map[string]any, error) {
+	runes := []rune(text)
+	edgeChars := keyboardTypeBatchedEdgeChars
+
+	// If string is short enough, just type the whole thing
+	if len(runes) <= edgeChars*2 {
+		return b.keyboardTypePerChar(ctx, text)
+	}
+
+	head := string(runes[:edgeChars])
+	middle := string(runes[edgeChars : len(runes)-edgeChars])
+	tail := string(runes[len(runes)-edgeChars:])
+
+	// Type first 5 characters with key events
+	if _, err := b.keyboardTypePerChar(ctx, head); err != nil {
+		return nil, err
+	}
+
+	// Insert middle portion
+	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
+		return chromedp.FromContext(ctx).Target.Execute(ctx, "Input.insertText", map[string]any{
+			"text": middle,
+		}, nil)
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	// Type last 5 characters with key events
+	if _, err := b.keyboardTypePerChar(ctx, tail); err != nil {
+		return nil, err
+	}
+
+	return map[string]any{"typed": text, "batched": true}, nil
 }
 
 func (b *Bridge) actionKeyboardInsert(ctx context.Context, req ActionRequest) (map[string]any, error) {

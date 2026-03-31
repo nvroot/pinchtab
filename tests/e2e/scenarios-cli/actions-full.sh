@@ -157,3 +157,23 @@ pt_ok eval "document.querySelector('#username').value"
 assert_json_field ".result" "192.168.1.100" "multiple dots preserved"
 
 end_test
+
+# ─────────────────────────────────────────────────────────────────
+start_test "pinchtab keyboard type handles long strings (#413)"
+
+# Issue #413: keyboard type with 50+ chars caused timeout and daemon freeze
+# due to 2 CDP calls per character.
+
+pt_ok nav "${FIXTURES_URL}/form.html"
+pt_ok click --css "#username"
+
+# Type a long string (65 chars) - should not timeout
+LONG_TEXT="The quick brown fox jumps over the lazy dog and keeps on running"
+pt_ok keyboard type "$LONG_TEXT"
+assert_output_contains "typed" "keyboard type response"
+
+# Verify the text was typed correctly
+pt_ok eval "document.querySelector('#username').value"
+assert_json_field ".result" "$LONG_TEXT" "long string typed correctly"
+
+end_test
