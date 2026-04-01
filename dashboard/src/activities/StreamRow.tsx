@@ -36,9 +36,7 @@ function isDefaultProfile(name: string | undefined): boolean {
   return lower === "default" || lower === "chrome-profile";
 }
 
-function isApiPath(path: string): boolean {
-  return path.startsWith("/api/") || path === "/health" || path === "/metrics";
-}
+
 
 function quoted(value: string): string {
   return `"${value}"`;
