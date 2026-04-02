@@ -239,7 +239,9 @@ func TestClean(t *testing.T) {
 		t.Fatal(err)
 	}
 	oldTime := time.Now().Add(-48 * time.Hour)
-	os.Chtimes(oldPath, oldTime, oldTime)
+	if err := os.Chtimes(oldPath, oldTime, oldTime); err != nil {
+		t.Fatalf("Chtimes(%s): %v", oldPath, err)
+	}
 
 	// Create a recent state file
 	recent := &StateFile{Name: "recent", SavedAt: time.Now(), Storage: map[string]OriginStorage{}}
