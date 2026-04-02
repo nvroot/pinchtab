@@ -256,9 +256,9 @@ curl -X POST http://localhost:9868/action \
   -d '{"kind":"click","selector":"e5"}'
 ```
 
-If the server is exposed beyond localhost, require a token and use a dedicated automation profile. See [TRUST.md](./TRUST.md) and [config.md](../../docs/reference/config.md).
+If the server is exposed beyond localhost, require a token and use a dedicated automation profile. See [TRUST.md](./TRUST.md).
 
-**Agent sessions**: Instead of sharing the server token, use `PINCHTAB_SESSION=pts_...` for per-agent identity with revocable tokens. Create sessions via `POST /api/agent-sessions`. See [sessions reference](../../docs/reference/sessions.md).
+**Agent sessions**: Instead of sharing the server bearer token, each agent can get its own revocable session token. Set `PINCHTAB_SESSION=pts_...` or send `Authorization: Session pts_...`. Create via `POST /api/agent-sessions` with `{"agentId":"...", "label":"..."}`. Sessions have idle timeout (default 12h) and max lifetime (default 24h). Manage with rotate (`POST /api/agent-sessions/{id}/rotate`) and revoke (`POST /api/agent-sessions/{id}/revoke`).
 
 ## Essential Commands
 
@@ -500,11 +500,9 @@ PinchTab is a fully open-source, local-only browser automation tool:
 
 ## References
 
-- Command surface: [commands.md](../../docs/commands.md)
-- CLI overview: [cli.md](../../docs/reference/cli.md)
-- Profiles: [profiles.md](../../docs/reference/profiles.md)
-- Instances: [instances.md](../../docs/reference/instances.md)
 - Full API: [api.md](./references/api.md)
 - Minimal env vars: [env.md](./references/env.md)
-- Config reference: [config.md](../../docs/reference/config.md)
+- Agent optimization: [agent-optimization.md](./references/agent-optimization.md)
+- Profiles: [profiles.md](./references/profiles.md)
+- MCP: [mcp.md](./references/mcp.md)
 - Security model: [TRUST.md](./TRUST.md)
