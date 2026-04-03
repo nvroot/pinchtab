@@ -78,8 +78,8 @@ func TestSafeEngine_Navigate_BlockedDomain(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for blocked domain")
 	}
-	if !strings.Contains(err.Error(), "IDPI") {
-		t.Errorf("error should mention IDPI: %v", err)
+	if !IsIDPIBlocked(err) {
+		t.Errorf("expected IDPIBlockedError, got: %T", err)
 	}
 	if inner.navigateCalled {
 		t.Error("inner Navigate should not be called when domain is blocked")
@@ -114,8 +114,8 @@ func TestSafeEngine_Snapshot_BlockedContent(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for blocked content")
 	}
-	if !strings.Contains(err.Error(), "IDPI") {
-		t.Errorf("error should mention IDPI: %v", err)
+	if !IsIDPIBlocked(err) {
+		t.Errorf("expected IDPIBlockedError, got: %T", err)
 	}
 }
 
@@ -149,6 +149,9 @@ func TestSafeEngine_Text_BlockedContent(t *testing.T) {
 	_, err := safe.Text(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error for blocked content")
+	}
+	if !IsIDPIBlocked(err) {
+		t.Errorf("expected IDPIBlockedError, got: %T", err)
 	}
 }
 

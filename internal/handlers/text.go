@@ -24,7 +24,11 @@ func (h *Handlers) HandleText(w http.ResponseWriter, r *http.Request) {
 		h.recordEngine(r, "lite")
 		result, err := h.Router.Lite().Text(r.Context(), tabID)
 		if err != nil {
-			httpx.Error(w, 500, fmt.Errorf("lite text: %w", err))
+			if engine.IsIDPIBlocked(err) {
+				httpx.Error(w, http.StatusForbidden, err)
+			} else {
+				httpx.Error(w, 500, fmt.Errorf("lite text: %w", err))
+			}
 			return
 		}
 		w.Header().Set("X-Engine", "lite")

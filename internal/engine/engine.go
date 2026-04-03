@@ -6,7 +6,26 @@
 // or any other package.
 package engine
 
-import "context"
+import (
+	"context"
+	"errors"
+	"fmt"
+)
+
+// IDPIBlockedError is returned when IDPI security checks block a request.
+type IDPIBlockedError struct {
+	Reason string
+}
+
+func (e *IDPIBlockedError) Error() string {
+	return fmt.Sprintf("blocked by IDPI: %s", e.Reason)
+}
+
+// IsIDPIBlocked reports whether err is an IDPI block.
+func IsIDPIBlocked(err error) bool {
+	var target *IDPIBlockedError
+	return errors.As(err, &target)
+}
 
 // Capability identifies an operation the engine may handle.
 type Capability string

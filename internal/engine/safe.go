@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strings"
 
@@ -39,7 +38,7 @@ func (s *SafeEngine) Navigate(ctx context.Context, url string) (*NavigateResult,
 	// Pre-flight: IDPI domain check.
 	domainResult := s.guard.CheckDomain(url)
 	if domainResult.Blocked {
-		return nil, fmt.Errorf("navigation blocked by IDPI: %s", domainResult.Reason)
+		return nil, &IDPIBlockedError{Reason: domainResult.Reason}
 	}
 
 	result, err := s.inner.Navigate(ctx, url)
@@ -75,7 +74,7 @@ func (s *SafeEngine) Snapshot(ctx context.Context, tabID, filter string) (*Snaps
 
 	scanResult := s.guard.ScanContent(sb.String())
 	if scanResult.Blocked {
-		return nil, fmt.Errorf("snapshot blocked by IDPI scanner: %s", scanResult.Reason)
+		return nil, &IDPIBlockedError{Reason: scanResult.Reason}
 	}
 	if scanResult.Threat {
 		result.IDPIWarning = scanResult.Reason
@@ -94,7 +93,7 @@ func (s *SafeEngine) Text(ctx context.Context, tabID string) (*TextResult, error
 	// Post-flight: scan text for injection patterns.
 	scanResult := s.guard.ScanContent(result.Text)
 	if scanResult.Blocked {
-		return nil, fmt.Errorf("content blocked by IDPI scanner: %s", scanResult.Reason)
+		return nil, &IDPIBlockedError{Reason: scanResult.Reason}
 	}
 	if scanResult.Threat {
 		slog.Warn("IDPI content warning on text", "engine", result.Engine, "reason", scanResult.Reason)

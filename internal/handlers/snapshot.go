@@ -68,7 +68,11 @@ func (h *Handlers) HandleSnapshot(w http.ResponseWriter, r *http.Request) {
 		h.recordEngine(r, "lite")
 		result, err := h.Router.Lite().Snapshot(r.Context(), tabID, filter)
 		if err != nil {
-			httpx.Error(w, 500, fmt.Errorf("lite snapshot: %w", err))
+			if engine.IsIDPIBlocked(err) {
+				httpx.Error(w, http.StatusForbidden, err)
+			} else {
+				httpx.Error(w, 500, fmt.Errorf("lite snapshot: %w", err))
+			}
 			return
 		}
 		// Convert to bridge.A11yNode for API compatibility.
@@ -77,7 +81,7 @@ func (h *Handlers) HandleSnapshot(w http.ResponseWriter, r *http.Request) {
 			flat[i] = bridge.A11yNode{Ref: n.Ref, Role: n.Role, Name: n.Name, Depth: n.Depth, Value: n.Value}
 		}
 		w.Header().Set("X-Engine", "lite")
-		httpx.JSON(w, 200, map[string]any{"nodes": flat})
+		httpx.JSON(w, 200, map[string]any{"engine": "lite", "nodes": flat})
 		return
 	}
 
