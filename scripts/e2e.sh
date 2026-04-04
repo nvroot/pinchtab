@@ -11,12 +11,6 @@ ERROR=$'\033[38;2;230;57;70m'
 NC=$'\033[0m'
 E2E_FILTER="${2:-}"
 
-build_e2e_cli_binary() {
-  echo "  ${MUTED}Building static binary for E2E CLI tests...${NC}"
-  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o tests/e2e/runner-cli/pinchtab ./cmd/pinchtab
-  echo "  ${SUCCESS}✓${NC} Binary built"
-  echo ""
-}
 
 show_filter_status() {
   if [ -n "${E2E_FILTER}" ]; then
@@ -169,7 +163,6 @@ run_cli_fast() {
   echo "  ${ACCENT}${BOLD}🐳 E2E CLI Fast tests (Docker)${NC}"
   show_filter_status
   echo ""
-  build_e2e_cli_binary
   prepare_suite_results "${summary_file}" "${report_file}" "${progress_file}" "${log_prefix}"
   set +e
   if [ -n "${E2E_FILTER}" ]; then
@@ -196,7 +189,6 @@ run_full_cli() {
   echo "  ${ACCENT}${BOLD}🐳 E2E Full CLI tests (Docker)${NC}"
   show_filter_status
   echo ""
-  build_e2e_cli_binary
   prepare_suite_results "${summary_file}" "${report_file}" "${progress_file}" "${log_prefix}"
   set +e
   E2E_SCENARIO_FILTER="${E2E_FILTER}" $COMPOSE -f "${compose_file}" up --build --abort-on-container-exit --exit-code-from runner-cli runner-cli
