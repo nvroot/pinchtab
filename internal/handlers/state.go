@@ -254,6 +254,9 @@ func (h *Handlers) HandleStateSave(w http.ResponseWriter, r *http.Request) {
 // HandleStateLoad reads a state file and restores cookies and storage into the browser.
 // Gated behind CapStateExport: restoring cookies/storage is session injection.
 //
+// If the given name has no exact match, the most recent file whose name starts
+// with the given prefix is used (prefix-based loading).
+//
 // @Endpoint POST /state/load
 func (h *Handlers) HandleStateLoad(w http.ResponseWriter, r *http.Request) {
 	if !h.stateExportEnabled() {
@@ -278,6 +281,17 @@ func (h *Handlers) HandleStateLoad(w http.ResponseWriter, r *http.Request) {
 
 	encryptionKey := os.Getenv("PINCHTAB_STATE_KEY")
 	path := state.ResolvePath(h.Config.StateDir, req.Name)
+
+	// If no exact file found, try prefix-based resolution (most recent match).
+	if path == "" {
+		matches, err := state.FindByPrefix(h.Config.StateDir, req.Name)
+		if err != nil || len(matches) == 0 {
+			httpx.Error(w, 404, fmt.Errorf("no state file found for name or prefix %q", req.Name))
+			return
+		}
+		// Matches are sorted newest first; use the first.
+		path = state.ResolvePath(h.Config.StateDir, matches[0].Name)
+	}
 
 	sf, err := state.Load(path, encryptionKey)
 	if err != nil {

@@ -75,8 +75,18 @@ func EnsureSessionsDir(stateDir string) (string, error) {
 	return dir, nil
 }
 
+// fileExtension returns the appropriate file extension based on whether the file
+// is encrypted. Encrypted files use .json.enc; plaintext files use .json.
+func fileExtension(encrypted bool) string {
+	if encrypted {
+		return ".json.enc"
+	}
+	return ".json"
+}
+
 // Save writes a StateFile to disk. If encryptionKey is non-empty, the payload
-// is encrypted with AES-256-GCM before writing.
+// is encrypted with AES-256-GCM before writing. Encrypted files use the
+// .json.enc extension; plaintext files use .json.
 func Save(stateDir string, sf *StateFile, encryptionKey string) (string, error) {
 	dir, err := EnsureSessionsDir(stateDir)
 	if err != nil {
@@ -102,7 +112,8 @@ func Save(stateDir string, sf *StateFile, encryptionKey string) (string, error) 
 		sf.Encrypted = true
 	}
 
-	filename := sanitizeFilename(sf.Name) + ".json"
+	ext := fileExtension(encryptionKey != "")
+	filename := sanitizeFilename(sf.Name) + ext
 	path := filepath.Join(dir, filename)
 
 	if err := os.WriteFile(path, data, 0600); err != nil {
@@ -136,6 +147,20 @@ func Load(path, encryptionKey string) (*StateFile, error) {
 	return &sf, nil
 }
 
+// isStateFile reports whether a directory entry is a recognised state file
+// (either .json or .json.enc).
+func isStateFile(name string) bool {
+	return strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".json.enc")
+}
+
+// trimStateExt removes the state file extension (.json or .json.enc) from a filename.
+func trimStateExt(name string) string {
+	if strings.HasSuffix(name, ".json.enc") {
+		return strings.TrimSuffix(name, ".json.enc")
+	}
+	return strings.TrimSuffix(name, ".json")
+}
+
 // List returns summaries of all saved state files in the sessions directory.
 func List(stateDir string) ([]StateEntry, error) {
 	dir := SessionsDir(stateDir)
@@ -150,7 +175,7 @@ func List(stateDir string) ([]StateEntry, error) {
 
 	var result []StateEntry
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+		if entry.IsDir() || !isStateFile(entry.Name()) {
 			continue
 		}
 
@@ -161,7 +186,7 @@ func List(stateDir string) ([]StateEntry, error) {
 
 		path := filepath.Join(dir, entry.Name())
 		se := StateEntry{
-			Name:      strings.TrimSuffix(entry.Name(), ".json"),
+			Name:      trimStateExt(entry.Name()),
 			SizeBytes: info.Size(),
 		}
 
@@ -190,22 +215,43 @@ func List(stateDir string) ([]StateEntry, error) {
 	return result, nil
 }
 
-// Delete removes a named state file.
+// FindByPrefix returns state entries whose name starts with the given prefix,
+// sorted newest first. Used by --name prefix loading in state load.
+func FindByPrefix(stateDir, prefix string) ([]StateEntry, error) {
+	if prefix == "" {
+		return nil, fmt.Errorf("prefix must not be empty")
+	}
+	all, err := List(stateDir)
+	if err != nil {
+		return nil, err
+	}
+	var matched []StateEntry
+	for _, e := range all {
+		if strings.HasPrefix(e.Name, prefix) {
+			matched = append(matched, e)
+		}
+	}
+	return matched, nil
+}
+
+// Delete removes a named state file. Tries .json.enc first, falls back to .json.
 func Delete(stateDir, name string) error {
 	dir := SessionsDir(stateDir)
-	filename := sanitizeFilename(name) + ".json"
-	path := filepath.Join(dir, filename)
-
-	if err := os.Remove(path); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("state file %q not found", name)
+	base := sanitizeFilename(name)
+	// Try encrypted extension first.
+	for _, ext := range []string{".json.enc", ".json"} {
+		path := filepath.Join(dir, base+ext)
+		if err := os.Remove(path); err == nil {
+			return nil
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("delete state file: %w", err)
 		}
-		return fmt.Errorf("delete state file: %w", err)
 	}
-	return nil
+	return fmt.Errorf("state file %q not found", name)
 }
 
 // Clean removes state files older than the given duration.
+// Handles both .json and .json.enc extensions.
 func Clean(stateDir string, olderThan time.Duration) (int, error) {
 	dir := SessionsDir(stateDir)
 	cutoff := time.Now().Add(-olderThan)
@@ -220,7 +266,7 @@ func Clean(stateDir string, olderThan time.Duration) (int, error) {
 
 	removed := 0
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+		if entry.IsDir() || !isStateFile(entry.Name()) {
 			continue
 		}
 
@@ -346,12 +392,24 @@ func sanitizeFilename(name string) string {
 }
 
 // ResolvePath returns the full canonical path for a named state file.
+// Tries .json.enc first (encrypted), then .json (plaintext).
 // Returns an empty string if the resolved path attempts to escape stateDir.
 func ResolvePath(stateDir, name string) string {
 	dir := SessionsDir(stateDir)
-	filename := sanitizeFilename(name) + ".json"
-	resolved := filepath.Clean(filepath.Join(dir, filename))
-	// Belt-and-suspenders: reject if the canonical path escapes the sessions dir.
+	base := sanitizeFilename(name)
+	// Try encrypted extension first, then plaintext.
+	for _, ext := range []string{".json.enc", ".json"} {
+		resolved := filepath.Clean(filepath.Join(dir, base+ext))
+		cleanDir := filepath.Clean(dir) + string(os.PathSeparator)
+		if !strings.HasPrefix(resolved, cleanDir) {
+			return ""
+		}
+		if _, err := os.Stat(resolved); err == nil {
+			return resolved
+		}
+	}
+	// File doesn't exist yet — return the .json path (for new saves).
+	resolved := filepath.Clean(filepath.Join(dir, base+".json"))
 	cleanDir := filepath.Clean(dir) + string(os.PathSeparator)
 	if !strings.HasPrefix(resolved, cleanDir) {
 		return ""

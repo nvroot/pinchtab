@@ -164,6 +164,7 @@ func (h *Handlers) handleStorageSet(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleStorageDelete removes a storage item or clears storage.
+// Supports type=local, type=session, or type=all (clears both).
 func (h *Handlers) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		TabID string `json:"tabId"`
@@ -176,11 +177,16 @@ func (h *Handlers) handleStorageDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Type == "" {
-		httpx.Error(w, 400, fmt.Errorf("type is required (local or session)"))
+		httpx.Error(w, 400, fmt.Errorf("type is required (local, session, or all)"))
 		return
 	}
-	if req.Type != "local" && req.Type != "session" {
-		httpx.Error(w, 400, fmt.Errorf("type must be 'local' or 'session'"))
+	if req.Type != "local" && req.Type != "session" && req.Type != "all" {
+		httpx.Error(w, 400, fmt.Errorf("type must be 'local', 'session', or 'all'"))
+		return
+	}
+	// key is not compatible with type=all
+	if req.Type == "all" && req.Key != "" {
+		httpx.Error(w, 400, fmt.Errorf("key cannot be used with type=all; omit key to clear both storages"))
 		return
 	}
 
@@ -330,8 +336,24 @@ func buildStorageGetScript(storageType, key string) string {
 }
 
 // buildStorageDeleteScript builds a JS expression that removes a specific key
-// or clears the entire storage. Returns a JSON string with success/origin fields.
+// or clears the entire storage. Supports type local, session, or all.
+// Returns a JSON string with success/origin fields.
 func buildStorageDeleteScript(storageType, key string) string {
+	// type=all: clear both localStorage and sessionStorage
+	if storageType == "all" {
+		return `
+		(function() {
+			try {
+				localStorage.clear();
+				sessionStorage.clear();
+				return JSON.stringify({success: true, action: "clear", type: "all", origin: window.location.origin});
+			} catch(e) {
+				return JSON.stringify({success: false, error: e.message, origin: window.location.origin});
+			}
+		})()
+	`
+	}
+
 	storageObj := "localStorage"
 	if storageType == "session" {
 		storageObj = "sessionStorage"
