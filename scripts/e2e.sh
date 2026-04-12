@@ -305,12 +305,29 @@ record_suite_duration() {
   [ -n "${suite_duration_ms}" ] || return 0
 
   if [ -f "${summary_file}" ]; then
-    echo "suite_wall_time=${suite_duration_ms}ms" >> "${summary_file}"
+    append_text_file "${summary_file}" "suite_wall_time=${suite_duration_ms}ms"$'\n'
   fi
 
   if [ -f "${report_file}" ]; then
-    printf '\n**Suite Wall Time:** %s\n' "$(format_duration_ms "${suite_duration_ms}")" >> "${report_file}"
+    append_text_file "${report_file}" "$(printf '\n**Suite Wall Time:** %s\n' "$(format_duration_ms "${suite_duration_ms}")")"
   fi
+}
+
+append_text_file() {
+  local target_file="$1"
+  local content="$2"
+  local target_dir tmp_file
+
+  if [ -w "${target_file}" ]; then
+    printf '%s' "${content}" >> "${target_file}"
+    return
+  fi
+
+  target_dir=$(dirname "${target_file}")
+  tmp_file=$(mktemp "${target_dir}/.append.XXXXXX")
+  cat "${target_file}" > "${tmp_file}"
+  printf '%s' "${content}" >> "${tmp_file}"
+  mv "${tmp_file}" "${target_file}"
 }
 
 suite_filter_matches() {
