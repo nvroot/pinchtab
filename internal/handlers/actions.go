@@ -53,7 +53,7 @@ func (h *Handlers) HandleAction(w http.ResponseWriter, r *http.Request) {
 	var req bridge.ActionRequest
 	if r.Method == http.MethodGet {
 		q := r.URL.Query()
-		req.Kind = q.Get("kind")
+		req.Kind = bridge.CanonicalActionKind(q.Get("kind"))
 		req.TabID = q.Get("tabId")
 		req.Owner = q.Get("owner")
 		req.Ref = q.Get("ref")
@@ -80,18 +80,18 @@ func (h *Handlers) HandleAction(w http.ResponseWriter, r *http.Request) {
 		}
 		if v := q.Get("hasXY"); v != "" {
 			if b, err := strconv.ParseBool(v); err == nil {
-				req.HasXY = b
+				req.HasXY = req.HasXY || b
 			}
 		}
 		req.Button = q.Get("button")
-		if v := q.Get("wheelDeltaX"); v != "" {
-			if n, err := strconv.Atoi(v); err == nil {
-				req.WheelDeltaX = n
+		if vals, ok := q["deltaX"]; ok && len(vals) > 0 {
+			if n, err := strconv.Atoi(vals[0]); err == nil {
+				req.DeltaX = n
 			}
 		}
-		if v := q.Get("wheelDeltaY"); v != "" {
-			if n, err := strconv.Atoi(v); err == nil {
-				req.WheelDeltaY = n
+		if vals, ok := q["deltaY"]; ok && len(vals) > 0 {
+			if n, err := strconv.Atoi(vals[0]); err == nil {
+				req.DeltaY = n
 			}
 		}
 	} else {
@@ -99,6 +99,7 @@ func (h *Handlers) HandleAction(w http.ResponseWriter, r *http.Request) {
 			httpx.Error(w, 400, fmt.Errorf("decode: %w", err))
 			return
 		}
+		req.Kind = bridge.CanonicalActionKind(req.Kind)
 	}
 
 	// Validate kind — single endpoint returns 400 for bad input (unlike batch which returns 200 with errors)
@@ -1043,6 +1044,7 @@ func (h *Handlers) cacheActionIntent(tabID string, req bridge.ActionRequest) {
 }
 
 func (h *Handlers) executeAction(ctx context.Context, req bridge.ActionRequest) (map[string]any, string, error) {
+	req.Kind = bridge.CanonicalActionKind(req.Kind)
 	if h.shouldUseLiteAction(req.Kind) {
 		return h.executeLiteAction(ctx, req)
 	}
@@ -1055,6 +1057,7 @@ func (h *Handlers) executeAction(ctx context.Context, req bridge.ActionRequest) 
 }
 
 func (h *Handlers) shouldUseLiteAction(kind string) bool {
+	kind = bridge.CanonicalActionKind(kind)
 	capability, ok := actionCapability(kind)
 	if !ok {
 		return h.Router != nil && h.Router.Mode() == engine.ModeLite
@@ -1066,7 +1069,7 @@ func (h *Handlers) executeLiteAction(ctx context.Context, req bridge.ActionReque
 	if h.Router == nil || h.Router.Lite() == nil {
 		return nil, "", fmt.Errorf("lite engine unavailable")
 	}
-	switch strings.ToLower(strings.TrimSpace(req.Kind)) {
+	switch bridge.CanonicalActionKind(req.Kind) {
 	case bridge.ActionClick:
 		if req.Ref == "" {
 			return nil, "lite", fmt.Errorf("lite mode actions require ref from /snapshot")
@@ -1096,7 +1099,7 @@ func (h *Handlers) executeLiteAction(ctx context.Context, req bridge.ActionReque
 }
 
 func actionCapability(kind string) (engine.Capability, bool) {
-	switch strings.ToLower(strings.TrimSpace(kind)) {
+	switch bridge.CanonicalActionKind(kind) {
 	case bridge.ActionClick:
 		return engine.CapClick, true
 	case bridge.ActionType, bridge.ActionFill:

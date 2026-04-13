@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/pinchtab/pinchtab/internal/bridge"
 	browseractions "github.com/pinchtab/pinchtab/internal/cli/actions"
 	"github.com/spf13/cobra"
 )
@@ -44,6 +45,19 @@ func newRequiredRefActionCmd(use, short, action string) *cobra.Command {
 	}
 }
 
+func newMouseActionCmd(use, short, action string, argsValidator cobra.PositionalArgs) *cobra.Command {
+	return &cobra.Command{
+		Use:   use,
+		Short: short,
+		Args:  argsValidator,
+		Run: func(cmd *cobra.Command, args []string) {
+			runCLI(func(rt cliRuntime) {
+				browseractions.MouseAction(rt.client, rt.base, rt.token, action, args, cmd)
+			})
+		},
+	}
+}
+
 var clickCmd = newOptionalRefActionCmd("click <ref>", "Click element", "click")
 
 var dblclickCmd = newOptionalRefActionCmd("dblclick <ref>", "Double-click element", "dblclick")
@@ -61,13 +75,24 @@ var mouseCmd = &cobra.Command{
 	Short: "Low-level mouse actions (move, down, up, wheel)",
 }
 
-var mouseMoveCmd = newOptionalRefActionCmd("move [ref|selector]", "Move mouse to coordinates or element center", "mousemove")
+var mouseMoveCmd = newMouseActionCmd("move [x y|ref|selector]", "Move mouse to coordinates or element center", bridge.ActionMouseMove, cobra.RangeArgs(0, 2))
 
-var mouseDownCmd = newOptionalRefActionCmd("down [ref|selector]", "Press mouse button", "mousedown")
+var mouseDownCmd = newMouseActionCmd("down [ref|selector]", "Press mouse button", bridge.ActionMouseDown, cobra.MaximumNArgs(1))
 
-var mouseUpCmd = newOptionalRefActionCmd("up [ref|selector]", "Release mouse button", "mouseup")
+var mouseUpCmd = newMouseActionCmd("up [ref|selector]", "Release mouse button", bridge.ActionMouseUp, cobra.MaximumNArgs(1))
 
-var mouseWheelCmd = newOptionalRefActionCmd("wheel [ref|selector]", "Dispatch mouse wheel deltas", "mousewheel")
+var mouseWheelCmd = newMouseActionCmd("wheel [dy|ref|selector]", "Dispatch mouse wheel deltas", bridge.ActionMouseWheel, cobra.MaximumNArgs(1))
+
+var dragCmd = &cobra.Command{
+	Use:   "drag <from> <to>",
+	Short: "Drag from one target to another",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		runCLI(func(rt cliRuntime) {
+			browseractions.Drag(rt.client, rt.base, rt.token, args, cmd)
+		})
+	},
+}
 
 var focusCmd = newOptionalRefActionCmd("focus <ref>", "Focus element", "focus")
 

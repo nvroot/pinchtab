@@ -98,10 +98,14 @@ Low-level pointer controls for cases where DOM-native click or hover behavior is
 
 ```bash
 pinchtab mouse move e5
+pinchtab mouse move 120 220
 pinchtab mouse down e5 --button left
+pinchtab mouse down --button left
 pinchtab mouse up e5 --button left
-pinchtab mouse wheel e5 --wheel-delta-y 240
+pinchtab mouse up --button left
+pinchtab mouse wheel 240 --dx 40
 pinchtab mouse move --x 400 --y 320
+pinchtab drag e5 400,320
 ```
 
 Use these for drag handles, canvas controls, precise hover choreography, or sites that require exact pointer sequencing.

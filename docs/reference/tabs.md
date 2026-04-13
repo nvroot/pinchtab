@@ -168,20 +168,20 @@ Low-level pointer control uses the same action surface:
 ```bash
 curl -X POST http://localhost:9867/tabs/<tabId>/action \
   -H "Content-Type: application/json" \
-  -d '{"kind":"mousemove","ref":"e5"}'
+  -d '{"kind":"mouse-move","ref":"e5"}'
 
 curl -X POST http://localhost:9867/tabs/<tabId>/action \
   -H "Content-Type: application/json" \
-  -d '{"kind":"mousedown","ref":"e5","button":"left"}'
+  -d '{"kind":"mouse-down","button":"left"}'
 
 curl -X POST http://localhost:9867/tabs/<tabId>/action \
   -H "Content-Type: application/json" \
-  -d '{"kind":"mousewheel","x":400,"y":320,"wheelDeltaY":240}'
+  -d '{"kind":"mouse-wheel","x":400,"y":320,"deltaY":240}'
 
 # CLI Alternatives
 pinchtab mouse move --tab <tabId> e5
-pinchtab mouse down --tab <tabId> e5 --button left
-pinchtab mouse wheel --tab <tabId> --x 400 --y 320 --wheel-delta-y 240
+pinchtab mouse down --tab <tabId> --button left
+pinchtab mouse wheel --tab <tabId> 240 --dx 40
 ```
 
 ### Handoff State

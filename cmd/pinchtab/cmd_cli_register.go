@@ -1,6 +1,9 @@
 package main
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/pinchtab/pinchtab/internal/bridge"
+	"github.com/spf13/cobra"
+)
 
 func init() {
 	registerBrowserCommands()
@@ -17,6 +20,7 @@ func registerBrowserCommands() {
 		snapCmd,
 		clickCmd,
 		dblclickCmd,
+		dragCmd,
 		typeCmd,
 		screenshotCmd,
 		tabsCmd,
@@ -67,6 +71,7 @@ func registerBrowserCommands() {
 		snapCmd,
 		clickCmd,
 		dblclickCmd,
+		dragCmd,
 		typeCmd,
 		screenshotCmd,
 		tabsCmd,
@@ -127,20 +132,22 @@ func configureBrowserFlags() {
 	addPointFlags(hoverCmd, "hover")
 
 	mouseMoveCmd.Flags().String("css", "", "CSS selector instead of ref")
-	addPointFlags(mouseMoveCmd, "mousemove")
+	addPointFlags(mouseMoveCmd, bridge.ActionMouseMove)
 
 	mouseDownCmd.Flags().String("css", "", "CSS selector instead of ref")
-	addPointFlags(mouseDownCmd, "mousedown")
+	addPointFlags(mouseDownCmd, bridge.ActionMouseDown)
 	mouseDownCmd.Flags().String("button", "left", "Mouse button: left, right, middle")
 
 	mouseUpCmd.Flags().String("css", "", "CSS selector instead of ref")
-	addPointFlags(mouseUpCmd, "mouseup")
+	addPointFlags(mouseUpCmd, bridge.ActionMouseUp)
 	mouseUpCmd.Flags().String("button", "left", "Mouse button: left, right, middle")
 
 	mouseWheelCmd.Flags().String("css", "", "CSS selector instead of ref")
-	addPointFlags(mouseWheelCmd, "mousewheel")
-	mouseWheelCmd.Flags().Int("wheel-delta-x", 0, "Wheel delta X")
-	mouseWheelCmd.Flags().Int("wheel-delta-y", 0, "Wheel delta Y")
+	addPointFlags(mouseWheelCmd, bridge.ActionMouseWheel)
+	mouseWheelCmd.Flags().Int("dx", 0, "Wheel delta X")
+	mouseWheelCmd.Flags().Int("dy", 0, "Wheel delta Y")
+
+	dragCmd.Flags().String("button", "left", "Mouse button: left, right, middle")
 
 	focusCmd.Flags().String("css", "", "CSS selector instead of ref")
 
@@ -201,6 +208,7 @@ func configureBrowserFlags() {
 		mouseDownCmd,
 		mouseUpCmd,
 		mouseWheelCmd,
+		dragCmd,
 		focusCmd,
 		typeCmd,
 		pressCmd,

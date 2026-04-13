@@ -7,6 +7,14 @@ import (
 	"net/http/httptest"
 )
 
+type capturedRequest struct {
+	Method  string
+	Path    string
+	Query   string
+	Body    string
+	Headers http.Header
+}
+
 type mockServer struct {
 	server      *httptest.Server
 	lastMethod  string
@@ -14,6 +22,7 @@ type mockServer struct {
 	lastQuery   string
 	lastBody    string
 	lastHeaders http.Header
+	requests    []capturedRequest
 	response    string
 	statusCode  int
 }
@@ -29,6 +38,13 @@ func newMockServer() *mockServer {
 			body, _ := io.ReadAll(r.Body)
 			m.lastBody = string(body)
 		}
+		m.requests = append(m.requests, capturedRequest{
+			Method:  m.lastMethod,
+			Path:    m.lastPath,
+			Query:   m.lastQuery,
+			Body:    m.lastBody,
+			Headers: m.lastHeaders.Clone(),
+		})
 		w.WriteHeader(m.statusCode)
 		_, _ = w.Write([]byte(m.response))
 	})
