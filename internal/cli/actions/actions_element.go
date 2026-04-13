@@ -2,13 +2,15 @@ package actions
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/pinchtab/pinchtab/internal/bridge"
 	"github.com/pinchtab/pinchtab/internal/cli"
 	"github.com/pinchtab/pinchtab/internal/cli/apiclient"
 	"github.com/pinchtab/pinchtab/internal/selector"
 	"github.com/spf13/cobra"
-	"net/http"
-	"strconv"
-	"strings"
 )
 
 func Action(client *http.Client, base, token, kind, selectorArg string, cmd *cobra.Command) {
@@ -23,23 +25,11 @@ func Action(client *http.Client, base, token, kind, selectorArg string, cmd *cob
 	if hasXY {
 		body["x"] = x
 		body["y"] = y
-		body["hasXY"] = true
 	}
 
 	if button, _ := cmd.Flags().GetString("button"); button != "" {
 		body["button"] = button
 	}
-	if cmd.Flags().Changed("wheel-delta-x") {
-		if deltaX, err := cmd.Flags().GetInt("wheel-delta-x"); err == nil {
-			body["wheelDeltaX"] = deltaX
-		}
-	}
-	if cmd.Flags().Changed("wheel-delta-y") {
-		if deltaY, err := cmd.Flags().GetInt("wheel-delta-y"); err == nil {
-			body["wheelDeltaY"] = deltaY
-		}
-	}
-
 	if css != "" {
 		// Explicit --css flag: send as plain CSS selector
 		body["selector"] = css
@@ -56,12 +46,7 @@ func Action(client *http.Client, base, token, kind, selectorArg string, cmd *cob
 		}
 	}
 
-	tabID, _ := cmd.Flags().GetString("tab")
-	path := "/action"
-	if tabID != "" {
-		path = fmt.Sprintf("/tabs/%s/action", tabID)
-	}
-	apiclient.DoPost(client, base, token, path, body)
+	postAction(client, base, token, cmd, body)
 }
 
 // setSelectorBody parses a unified selector string and sets the appropriate
@@ -75,6 +60,184 @@ func setSelectorBody(body map[string]any, s string) {
 	default:
 		body["selector"] = sel.Value
 	}
+}
+
+func postAction(client *http.Client, base, token string, cmd *cobra.Command, body map[string]any) {
+	postActionWithHeaders(client, base, token, cmd, body, nil)
+}
+
+func postActionWithHeaders(client *http.Client, base, token string, cmd *cobra.Command, body map[string]any, headers map[string]string) {
+	tabID, _ := cmd.Flags().GetString("tab")
+	path := "/action"
+	if tabID != "" {
+		path = fmt.Sprintf("/tabs/%s/action", tabID)
+	}
+	apiclient.DoPostWithHeaders(client, base, token, path, body, headers)
+}
+
+func setPointBody(body map[string]any, x, y float64) {
+	body["x"] = x
+	body["y"] = y
+}
+
+func readWheelDelta(cmd *cobra.Command, primary string) (int, bool) {
+	if cmd.Flags().Changed(primary) {
+		if value, err := cmd.Flags().GetInt(primary); err == nil {
+			return value, true
+		}
+	}
+	return 0, false
+}
+
+func parseCoordinateArgs(xArg, yArg string) (float64, float64, error) {
+	x, err := strconv.ParseFloat(xArg, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	y, err := strconv.ParseFloat(yArg, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	return x, y, nil
+}
+
+func applyMouseTarget(body map[string]any, selectorArg string, cmd *cobra.Command) bool {
+	css, _ := cmd.Flags().GetString("css")
+	hasX := cmd.Flags().Changed("x")
+	hasY := cmd.Flags().Changed("y")
+	if hasX || hasY {
+		x, _ := cmd.Flags().GetFloat64("x")
+		y, _ := cmd.Flags().GetFloat64("y")
+		setPointBody(body, x, y)
+		return true
+	}
+	if css != "" {
+		body["selector"] = css
+		return true
+	}
+	if selectorArg != "" {
+		setSelectorBody(body, selectorArg)
+		return true
+	}
+	return false
+}
+
+func MouseAction(client *http.Client, base, token, kind string, args []string, cmd *cobra.Command) {
+	body := map[string]any{"kind": kind}
+
+	if button, _ := cmd.Flags().GetString("button"); button != "" {
+		body["button"] = button
+	}
+
+	switch kind {
+	case bridge.ActionMouseMove:
+		if len(args) == 2 {
+			if cmd.Flags().Changed("x") || cmd.Flags().Changed("y") || cmd.Flags().Changed("css") {
+				cli.Fatal("Usage: pinchtab mouse move <x> <y> or pinchtab mouse move <selector> or pinchtab mouse move --x <num> --y <num>")
+			}
+			x, y, err := parseCoordinateArgs(args[0], args[1])
+			if err != nil {
+				cli.Fatal("Usage: pinchtab mouse move <x> <y>")
+			}
+			setPointBody(body, x, y)
+		} else if len(args) == 1 {
+			if cmd.Flags().Changed("x") || cmd.Flags().Changed("y") || cmd.Flags().Changed("css") {
+				cli.Fatal("Usage: pinchtab mouse move <x> <y> or pinchtab mouse move <selector> or pinchtab mouse move --x <num> --y <num>")
+			}
+			setSelectorBody(body, args[0])
+		} else if !applyMouseTarget(body, "", cmd) {
+			cli.Fatal("Usage: pinchtab mouse move <x> <y> or pinchtab mouse move <selector> or pinchtab mouse move --x <num> --y <num>")
+		}
+	case bridge.ActionMouseDown, bridge.ActionMouseUp:
+		if len(args) > 1 {
+			cli.Fatal("Usage: pinchtab mouse %s [selector]", strings.TrimPrefix(kind, "mouse-"))
+		}
+		_ = applyMouseTarget(body, optionalMouseArg(args), cmd)
+	case bridge.ActionMouseWheel:
+		if len(args) > 1 {
+			cli.Fatal("Usage: pinchtab mouse wheel <dy> [--dx <n>] or pinchtab mouse wheel [selector]")
+		}
+		if len(args) == 1 {
+			if dy, err := strconv.Atoi(args[0]); err == nil {
+				body["deltaY"] = dy
+			} else {
+				setSelectorBody(body, args[0])
+			}
+		}
+		if deltaX, ok := readWheelDelta(cmd, "dx"); ok {
+			body["deltaX"] = deltaX
+		}
+		if deltaY, ok := readWheelDelta(cmd, "dy"); ok {
+			if _, fromArg := body["deltaY"]; fromArg {
+				cli.Fatal("Usage: pinchtab mouse wheel <dy> [--dx <n>] or pinchtab mouse wheel [selector]")
+			}
+			body["deltaY"] = deltaY
+		}
+		if _, hasTarget := body["selector"]; !hasTarget {
+			if _, hasRef := body["ref"]; !hasRef {
+				_ = applyMouseTarget(body, "", cmd)
+			}
+		} else if cmd.Flags().Changed("x") || cmd.Flags().Changed("y") || cmd.Flags().Changed("css") {
+			cli.Fatal("Usage: pinchtab mouse wheel <dy> [--dx <n>] or pinchtab mouse wheel [selector]")
+		}
+	default:
+		cli.Fatal("unsupported mouse action: %s", kind)
+	}
+
+	postAction(client, base, token, cmd, body)
+}
+
+type dragTarget struct {
+	selector string
+	x        float64
+	y        float64
+	hasXY    bool
+}
+
+func optionalMouseArg(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	return args[0]
+}
+
+func parseDragTarget(raw string) dragTarget {
+	parts := strings.Split(raw, ",")
+	if len(parts) == 2 {
+		x, errX := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+		y, errY := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+		if errX == nil && errY == nil {
+			return dragTarget{x: x, y: y, hasXY: true}
+		}
+	}
+	return dragTarget{selector: raw}
+}
+
+func actionBodyForTarget(kind string, target dragTarget) map[string]any {
+	body := map[string]any{"kind": kind}
+	if target.hasXY {
+		setPointBody(body, target.x, target.y)
+		return body
+	}
+	setSelectorBody(body, target.selector)
+	return body
+}
+
+func Drag(client *http.Client, base, token string, args []string, cmd *cobra.Command) {
+	from := parseDragTarget(args[0])
+	to := parseDragTarget(args[1])
+
+	mouseDown := map[string]any{"kind": bridge.ActionMouseDown}
+	mouseUp := map[string]any{"kind": bridge.ActionMouseUp}
+	if button, _ := cmd.Flags().GetString("button"); button != "" {
+		mouseDown["button"] = button
+		mouseUp["button"] = button
+	}
+
+	postAction(client, base, token, cmd, actionBodyForTarget(bridge.ActionMouseMove, from))
+	postAction(client, base, token, cmd, mouseDown)
+	postAction(client, base, token, cmd, actionBodyForTarget(bridge.ActionMouseMove, to))
+	postAction(client, base, token, cmd, mouseUp)
 }
 
 func ActionSimple(client *http.Client, base, token, kind string, args []string, cmd *cobra.Command) {
@@ -124,10 +287,5 @@ func ActionSimple(client *http.Client, base, token, kind string, args []string, 
 		body["key"] = args[0]
 	}
 
-	tabID, _ := cmd.Flags().GetString("tab")
-	path := "/action"
-	if tabID != "" {
-		path = fmt.Sprintf("/tabs/%s/action", tabID)
-	}
-	apiclient.DoPost(client, base, token, path, body)
+	postAction(client, base, token, cmd, body)
 }

@@ -70,10 +70,17 @@ func DoGetRaw(client *http.Client, base, token, path string, params url.Values) 
 }
 
 func DoPost(client *http.Client, base, token, path string, body map[string]any) map[string]any {
+	return DoPostWithHeaders(client, base, token, path, body, nil)
+}
+
+func DoPostWithHeaders(client *http.Client, base, token, path string, body map[string]any, headers map[string]string) map[string]any {
 	data, _ := json.Marshal(body)
 	req, _ := http.NewRequest("POST", base+path, bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
 	setClientHeaders(req, token)
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		fatal("Request failed: %v", err)

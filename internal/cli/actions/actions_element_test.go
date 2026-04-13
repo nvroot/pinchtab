@@ -15,8 +15,8 @@ func newActionCmd() *cobra.Command {
 	cmd.Flags().Float64("x", 0, "")
 	cmd.Flags().Float64("y", 0, "")
 	cmd.Flags().String("button", "", "")
-	cmd.Flags().Int("wheel-delta-x", 0, "")
-	cmd.Flags().Int("wheel-delta-y", 0, "")
+	cmd.Flags().Int("dx", 0, "")
+	cmd.Flags().Int("dy", 0, "")
 	return cmd
 }
 
@@ -142,18 +142,18 @@ func TestMouseDownIncludesButton(t *testing.T) {
 	_ = cmd.Flags().Set("x", "25")
 	_ = cmd.Flags().Set("y", "40")
 
-	Action(client, m.base(), "", "mousedown", "", cmd)
+	MouseAction(client, m.base(), "", "mouse-down", nil, cmd)
 
 	var body map[string]any
 	_ = json.Unmarshal([]byte(m.lastBody), &body)
-	if body["kind"] != "mousedown" {
-		t.Errorf("expected kind=mousedown, got %v", body["kind"])
+	if body["kind"] != "mouse-down" {
+		t.Errorf("expected kind=mouse-down, got %v", body["kind"])
 	}
 	if body["button"] != "right" {
 		t.Errorf("expected button=right, got %v", body["button"])
 	}
-	if body["hasXY"] != true {
-		t.Errorf("expected hasXY=true, got %v", body["hasXY"])
+	if body["x"] != float64(25) || body["y"] != float64(40) {
+		t.Errorf("expected x/y coordinates, got %v", body)
 	}
 }
 
@@ -163,23 +163,92 @@ func TestMouseWheelIncludesExplicitDeltas(t *testing.T) {
 	client := m.server.Client()
 
 	cmd := newActionCmd()
-	_ = cmd.Flags().Set("wheel-delta-x", "120")
-	_ = cmd.Flags().Set("wheel-delta-y", "-300")
+	_ = cmd.Flags().Set("dx", "120")
+	_ = cmd.Flags().Set("dy", "-300")
 	_ = cmd.Flags().Set("x", "10")
 	_ = cmd.Flags().Set("y", "20")
 
-	Action(client, m.base(), "", "mousewheel", "", cmd)
+	MouseAction(client, m.base(), "", "mouse-wheel", nil, cmd)
 
 	var body map[string]any
 	_ = json.Unmarshal([]byte(m.lastBody), &body)
-	if body["kind"] != "mousewheel" {
-		t.Errorf("expected kind=mousewheel, got %v", body["kind"])
+	if body["kind"] != "mouse-wheel" {
+		t.Errorf("expected kind=mouse-wheel, got %v", body["kind"])
 	}
-	if body["wheelDeltaX"] != float64(120) {
-		t.Errorf("expected wheelDeltaX=120, got %v", body["wheelDeltaX"])
+	if body["deltaX"] != float64(120) {
+		t.Errorf("expected deltaX=120, got %v", body["deltaX"])
 	}
-	if body["wheelDeltaY"] != float64(-300) {
-		t.Errorf("expected wheelDeltaY=-300, got %v", body["wheelDeltaY"])
+	if body["deltaY"] != float64(-300) {
+		t.Errorf("expected deltaY=-300, got %v", body["deltaY"])
+	}
+}
+
+func TestMouseMoveSupportsPositionalCoordinates(t *testing.T) {
+	m := newMockServer()
+	defer m.close()
+	client := m.server.Client()
+
+	cmd := newActionCmd()
+	MouseAction(client, m.base(), "", "mouse-move", []string{"100", "200"}, cmd)
+
+	var body map[string]any
+	_ = json.Unmarshal([]byte(m.lastBody), &body)
+	if body["kind"] != "mouse-move" {
+		t.Fatalf("expected kind=mouse-move, got %v", body["kind"])
+	}
+	if body["x"] != float64(100) || body["y"] != float64(200) {
+		t.Fatalf("expected positional coordinates, got %v", body)
+	}
+}
+
+func TestMouseWheelSupportsPositionalDeltaY(t *testing.T) {
+	m := newMockServer()
+	defer m.close()
+	client := m.server.Client()
+
+	cmd := newActionCmd()
+	_ = cmd.Flags().Set("dx", "20")
+	MouseAction(client, m.base(), "", "mouse-wheel", []string{"-120"}, cmd)
+
+	var body map[string]any
+	_ = json.Unmarshal([]byte(m.lastBody), &body)
+	if body["deltaX"] != float64(20) {
+		t.Fatalf("expected deltaX=20, got %v", body["deltaX"])
+	}
+	if body["deltaY"] != float64(-120) {
+		t.Fatalf("expected deltaY=-120, got %v", body["deltaY"])
+	}
+}
+
+func TestDragPostsMouseSequence(t *testing.T) {
+	m := newMockServer()
+	defer m.close()
+	client := m.server.Client()
+
+	cmd := newActionCmd()
+	Drag(client, m.base(), "", []string{"e5", "400,320"}, cmd)
+
+	if len(m.requests) != 4 {
+		t.Fatalf("expected 4 requests, got %d", len(m.requests))
+	}
+
+	var bodies []map[string]any
+	for _, req := range m.requests {
+		var body map[string]any
+		_ = json.Unmarshal([]byte(req.Body), &body)
+		bodies = append(bodies, body)
+	}
+	if bodies[0]["kind"] != "mouse-move" || bodies[0]["ref"] != "e5" {
+		t.Fatalf("unexpected first request: %+v", bodies[0])
+	}
+	if bodies[1]["kind"] != "mouse-down" {
+		t.Fatalf("unexpected second request: %+v", bodies[1])
+	}
+	if bodies[2]["kind"] != "mouse-move" || bodies[2]["x"] != float64(400) || bodies[2]["y"] != float64(320) {
+		t.Fatalf("unexpected third request: %+v", bodies[2])
+	}
+	if bodies[3]["kind"] != "mouse-up" {
+		t.Fatalf("unexpected fourth request: %+v", bodies[3])
 	}
 }
 

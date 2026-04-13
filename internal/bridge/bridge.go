@@ -3,6 +3,7 @@ package bridge
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -57,6 +58,8 @@ type Bridge struct {
 	workerStealthTargets sync.Map
 	handoffMu            sync.RWMutex
 	handoffs             map[string]TabHandoffState
+	pointerMu            sync.RWMutex
+	pointerByTab         map[string]pointerState
 
 	// Lazy initialization / restart coordination
 	initMu      sync.Mutex
@@ -86,6 +89,7 @@ func New(allocCtx, browserCtx context.Context, cfg *config.RuntimeConfig) *Bridg
 		netMonitor:          NewNetworkMonitor(netBufSize),
 		fingerprintOverlays: make(map[string]bool),
 		handoffs:            make(map[string]TabHandoffState),
+		pointerByTab:        make(map[string]pointerState),
 		LogStore:            logStore,
 		stealthLaunchMode:   stealth.LaunchModeUninitialized,
 	}
@@ -529,6 +533,8 @@ func (b *Bridge) BrowserContext() context.Context {
 }
 
 func (b *Bridge) ExecuteAction(ctx context.Context, kind string, req ActionRequest) (map[string]any, error) {
+	kind = CanonicalActionKind(kind)
+	req.Kind = CanonicalActionKind(req.Kind)
 	fn, ok := b.Actions[kind]
 	if !ok {
 		return nil, fmt.Errorf("unknown action: %s", kind)
@@ -626,12 +632,12 @@ type ActionRequest struct {
 
 	ScrollX int `json:"scrollX"`
 	ScrollY int `json:"scrollY"`
-	// WheelDeltaX/WheelDeltaY are explicit mouse-wheel deltas for low-level
-	// mousewheel actions. ScrollX/ScrollY remain for backward compatibility.
-	WheelDeltaX int `json:"wheelDeltaX,omitempty"`
-	WheelDeltaY int `json:"wheelDeltaY,omitempty"`
-	DragX       int `json:"dragX"`
-	DragY       int `json:"dragY"`
+	// DeltaX/DeltaY are explicit mouse-wheel deltas for low-level
+	// mouse-wheel actions. ScrollX/ScrollY remain for backward compatibility.
+	DeltaX int `json:"deltaX,omitempty"`
+	DeltaY int `json:"deltaY,omitempty"`
+	DragX  int `json:"dragX"`
+	DragY  int `json:"dragY"`
 
 	WaitNav bool   `json:"waitNav"`
 	Fast    bool   `json:"fast"`
@@ -647,6 +653,34 @@ type ActionRequest struct {
 	DialogText string `json:"dialogText,omitempty"`
 }
 
+type actionRequestAlias ActionRequest
+
+func (r *ActionRequest) UnmarshalJSON(data []byte) error {
+	var alias actionRequestAlias
+	if err := json.Unmarshal(data, &alias); err != nil {
+		return err
+	}
+	raw := map[string]json.RawMessage{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	*r = ActionRequest(alias)
+	r.Kind = CanonicalActionKind(r.Kind)
+	r.HasXY = r.HasXY || hasJSONKey(raw, "x") || hasJSONKey(raw, "y")
+	if hasJSONKey(raw, "deltaX") {
+		if err := json.Unmarshal(raw["deltaX"], &r.DeltaX); err != nil {
+			return err
+		}
+	}
+	if hasJSONKey(raw, "deltaY") {
+		if err := json.Unmarshal(raw["deltaY"], &r.DeltaY); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // NormalizeSelector merges legacy Ref and Selector (CSS) fields into the
 // unified Selector field. After calling this, only Selector needs to be
 // inspected for element targeting. The method is idempotent.
@@ -659,6 +693,15 @@ func (r *ActionRequest) NormalizeSelector() {
 	}
 	// If Selector is already set (either from JSON or from Ref promotion),
 	// leave it as-is — Parse() will auto-detect the kind.
+}
+
+func CanonicalActionKind(kind string) string {
+	return kind
+}
+
+func hasJSONKey(raw map[string]json.RawMessage, key string) bool {
+	_, ok := raw[key]
+	return ok
 }
 
 func cryptoRandSeed() int64 {

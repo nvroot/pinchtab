@@ -113,19 +113,19 @@ curl -X POST /action -H 'Content-Type: application/json' \
 
 # Move pointer without clicking
 curl -X POST /action -H 'Content-Type: application/json' \
-  -d '{"kind": "mousemove", "ref": "e8"}'
+  -d '{"kind": "mouse-move", "ref": "e8"}'
 
 # Press and release a mouse button
 curl -X POST /action -H 'Content-Type: application/json' \
-  -d '{"kind": "mousedown", "ref": "e8", "button": "left"}'
+  -d '{"kind": "mouse-down", "button": "left"}'
 curl -X POST /action -H 'Content-Type: application/json' \
-  -d '{"kind": "mouseup", "ref": "e8", "button": "left"}'
+  -d '{"kind": "mouse-up", "button": "left"}'
 
 # Wheel at an element or coordinates
 curl -X POST /action -H 'Content-Type: application/json' \
-  -d '{"kind": "mousewheel", "ref": "e8", "wheelDeltaY": 240}'
+  -d '{"kind": "mouse-wheel", "ref": "e8", "deltaY": 240}'
 curl -X POST /action -H 'Content-Type: application/json' \
-  -d '{"kind": "mousewheel", "x": 400, "y": 320, "wheelDeltaY": -320}'
+  -d '{"kind": "mouse-wheel", "x": 400, "y": 320, "deltaY": -320}'
 
 # Select dropdown option (by value or visible text)
 curl -X POST /action -H 'Content-Type: application/json' \
@@ -148,8 +148,9 @@ Notes:
 
 - selector-based click and double-click paths resolve through backend node IDs before dispatching pointer events
 - low-level pointer actions accept `ref`, `selector`, `nodeId`, or `x`/`y`
-- `mousedown` and `mouseup` accept `button` with `left`, `right`, or `middle`
-- `mousewheel` accepts `wheelDeltaX` and `wheelDeltaY`; when omitted, legacy `scrollX` / `scrollY` still work
+- `mouse-down` and `mouse-up` accept `button` with `left`, `right`, or `middle`
+- `mouse-wheel` accepts `deltaX` and `deltaY`; when omitted, legacy `scrollX` / `scrollY` still work
+- `mouse-down`, `mouse-up`, and `mouse-wheel` use the current pointer position when you do not pass a fresh target
 
 ## Wait for page state
 

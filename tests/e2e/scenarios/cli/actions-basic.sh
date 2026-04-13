@@ -63,13 +63,13 @@ if assert_ref_found "$MOUSE_REF" "mouse target ref"; then
   pt_ok mouse move "$MOUSE_REF"
   assert_output_contains "moved" "confirms mouse move action"
 
-  pt_ok mouse down "$MOUSE_REF" --button left
+  pt_ok mouse down --button left
   assert_output_contains "down" "confirms mouse down action"
 
-  pt_ok mouse up "$MOUSE_REF" --button left
+  pt_ok mouse up --button left
   assert_output_contains "up" "confirms mouse up action"
 
-  pt_ok mouse wheel --x 160 --y 190 --wheel-delta-y 240
+  pt_ok mouse wheel 240 --dx 40
   assert_output_contains "wheel" "confirms mouse wheel action"
 
   pt_ok eval "window.mouseFixtureState.mousemoveCount"
@@ -89,6 +89,29 @@ if assert_ref_found "$MOUSE_REF" "mouse target ref"; then
 
   pt_ok eval "window.mouseFixtureState.wheelDeltaY"
   assert_json_field ".result" "240" "wheel delta Y accumulated"
+fi
+
+end_test
+
+# ─────────────────────────────────────────────────────────────────
+start_test "pinchtab drag <from> <to>"
+
+pt_ok nav "${FIXTURES_URL}/mouse-events.html"
+pt_ok snap --interactive
+
+DRAG_REF=$(find_ref_by_name "Mouse Target" "$PT_OUT")
+if assert_ref_found "$DRAG_REF" "drag target ref"; then
+  pt_ok drag "$DRAG_REF" "160,190"
+  assert_output_contains "up" "confirms drag wrapper completed"
+
+  pt_ok eval "window.mouseFixtureState.mousemoveCount"
+  assert_output_jq '.result >= 2' "drag performs multiple move events" "drag did not perform multiple move events"
+
+  pt_ok eval "window.mouseFixtureState.mousedownCount"
+  assert_json_field ".result" "1" "drag performed one mouse down"
+
+  pt_ok eval "window.mouseFixtureState.mouseupCount"
+  assert_json_field ".result" "1" "drag performed one mouse up"
 fi
 
 end_test

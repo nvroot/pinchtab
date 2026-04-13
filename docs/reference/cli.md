@@ -92,10 +92,11 @@ Common commands:
 | `pinchtab quick <url>` | Navigate and snapshot |
 | `pinchtab snap` | Accessibility snapshot |
 | `pinchtab click <selector>` | Click an element |
-| `pinchtab mouse move <selector>` | Move the pointer to an element or coordinates |
-| `pinchtab mouse down <selector>` | Press a mouse button |
-| `pinchtab mouse up <selector>` | Release a mouse button |
-| `pinchtab mouse wheel <selector>` | Dispatch wheel deltas at an element or coordinates |
+| `pinchtab mouse move <x> <y>` | Move the pointer to coordinates |
+| `pinchtab mouse down [selector]` | Press a mouse button at the current pointer or a fresh target |
+| `pinchtab mouse up [selector]` | Release a mouse button at the current pointer or a fresh target |
+| `pinchtab mouse wheel [dy\|selector]` | Dispatch wheel deltas at the current pointer or a fresh target |
+| `pinchtab drag <from> <to>` | Drag from one target to another |
 | `pinchtab type <selector> <text>` | Type via key events |
 | `pinchtab fill <selector> <text>` | Fill directly |
 | `pinchtab text` | Extract page text |

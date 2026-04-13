@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -138,11 +139,11 @@ func TestMouseWheelAction_UsesExplicitWheelDeltas(t *testing.T) {
 	}
 
 	res, err := b.Actions[ActionMouseWheel](context.Background(), ActionRequest{
-		HasXY:       true,
-		X:           50,
-		Y:           75,
-		WheelDeltaX: 123,
-		WheelDeltaY: -456,
+		HasXY:  true,
+		X:      50,
+		Y:      75,
+		DeltaX: 123,
+		DeltaY: -456,
 	})
 	if err != nil {
 		t.Fatalf("mouse wheel returned error: %v", err)
@@ -152,6 +153,107 @@ func TestMouseWheelAction_UsesExplicitWheelDeltas(t *testing.T) {
 	}
 	if !res["wheel"].(bool) {
 		t.Fatalf("expected wheel=true in result payload, got %#v", res)
+	}
+}
+
+func TestMouseActions_TrackCurrentPointerPosition(t *testing.T) {
+	b := New(context.TODO(), nil, &config.RuntimeConfig{})
+
+	origMove := mouseMoveByCoordinateAction
+	origUp := mouseUpByCoordinateAction
+	t.Cleanup(func() {
+		mouseMoveByCoordinateAction = origMove
+		mouseUpByCoordinateAction = origUp
+	})
+
+	moveCalled := false
+	upCalled := false
+	mouseMoveByCoordinateAction = func(ctx context.Context, x, y float64) error {
+		moveCalled = true
+		if x != 15 || y != 25 {
+			t.Fatalf("move coordinates = (%v, %v), want (15, 25)", x, y)
+		}
+		return nil
+	}
+	mouseUpByCoordinateAction = func(ctx context.Context, x, y float64, button string) error {
+		upCalled = true
+		if x != 15 || y != 25 {
+			t.Fatalf("up coordinates = (%v, %v), want (15, 25)", x, y)
+		}
+		if button != "left" {
+			t.Fatalf("button = %q, want left", button)
+		}
+		return nil
+	}
+
+	if _, err := b.Actions[ActionMouseMove](context.Background(), ActionRequest{
+		TabID: "tab1",
+		HasXY: true,
+		X:     15,
+		Y:     25,
+	}); err != nil {
+		t.Fatalf("mouse move returned error: %v", err)
+	}
+	if _, err := b.Actions[ActionMouseUp](context.Background(), ActionRequest{TabID: "tab1"}); err != nil {
+		t.Fatalf("mouse up returned error: %v", err)
+	}
+	if !moveCalled || !upCalled {
+		t.Fatalf("expected move and up actions to be called, got move=%v up=%v", moveCalled, upCalled)
+	}
+}
+
+func TestMouseDownAction_UsesTrackedPointerWhenTargetMissing(t *testing.T) {
+	b := New(context.TODO(), nil, &config.RuntimeConfig{})
+	b.rememberPointerPosition("tab-current", 33, 44)
+
+	origDown := mouseDownByCoordinateAction
+	t.Cleanup(func() {
+		mouseDownByCoordinateAction = origDown
+	})
+
+	mouseDownByCoordinateAction = func(ctx context.Context, x, y float64, button string) error {
+		if x != 33 || y != 44 {
+			t.Fatalf("down coordinates = (%v, %v), want (33, 44)", x, y)
+		}
+		if button != "right" {
+			t.Fatalf("button = %q, want right", button)
+		}
+		return nil
+	}
+
+	if _, err := b.Actions[ActionMouseDown](context.Background(), ActionRequest{
+		TabID:  "tab-current",
+		Button: "right",
+	}); err != nil {
+		t.Fatalf("mouse down returned error: %v", err)
+	}
+}
+
+func TestMouseWheelAction_RequiresKnownPointerWhenTargetMissing(t *testing.T) {
+	b := New(context.TODO(), nil, &config.RuntimeConfig{})
+
+	_, err := b.Actions[ActionMouseWheel](context.Background(), ActionRequest{TabID: "tab-missing"})
+	if err == nil {
+		t.Fatal("expected missing pointer error")
+	}
+	if !strings.Contains(err.Error(), "move pointer first") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestActionRequestUnmarshal_UsesCanonicalMouseFields(t *testing.T) {
+	var req ActionRequest
+	if err := json.Unmarshal([]byte(`{"kind":"mouse-wheel","x":0,"y":0,"deltaX":12,"deltaY":-34}`), &req); err != nil {
+		t.Fatalf("unmarshal action request: %v", err)
+	}
+	if req.Kind != ActionMouseWheel {
+		t.Fatalf("kind = %q, want %q", req.Kind, ActionMouseWheel)
+	}
+	if !req.HasXY {
+		t.Fatal("expected HasXY=true when x/y keys are present")
+	}
+	if req.DeltaX != 12 || req.DeltaY != -34 {
+		t.Fatalf("wheel deltas = (%d, %d), want (12, -34)", req.DeltaX, req.DeltaY)
 	}
 }
 

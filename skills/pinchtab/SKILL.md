@@ -208,10 +208,14 @@ pinchtab click <selector>                           # Click element
 pinchtab click --wait-nav <selector>                # Click and wait for navigation
 pinchtab click --x 100 --y 200                      # Click by coordinates
 pinchtab dblclick <selector>                        # Double-click element
-pinchtab mouse move <selector>                      # Move pointer to element center or coordinates
-pinchtab mouse down <selector> --button left        # Press a mouse button
-pinchtab mouse up <selector> --button left          # Release a mouse button
-pinchtab mouse wheel <selector> --wheel-delta-y 240 # Dispatch wheel deltas
+pinchtab mouse move <selector>                      # Move pointer to element center
+pinchtab mouse move <x> <y>                         # Move pointer to coordinates
+pinchtab mouse down <selector> --button left        # Press a mouse button at an explicit target
+pinchtab mouse down --button left                   # Press a mouse button at current pointer
+pinchtab mouse up <selector> --button left          # Release a mouse button at an explicit target
+pinchtab mouse up --button left                     # Release a mouse button at current pointer
+pinchtab mouse wheel 240 --dx 40                    # Dispatch wheel deltas at current pointer
+pinchtab drag <from> <to>                           # Drag between selector/ref or x,y points
 pinchtab type <selector> <text>                     # Type with keystrokes
 pinchtab fill <selector> <text>                     # Set value directly
 pinchtab press <key>                                # Press key (Enter, Tab, Escape...)
@@ -323,7 +327,7 @@ curl -X POST http://localhost:9867/tabs/TAB_ID/action \
 curl -X POST http://localhost:9867/tabs/TAB_ID/action \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"kind":"mousewheel","x":400,"y":320,"wheelDeltaY":240}'
+  -d '{"kind":"mouse-wheel","x":400,"y":320,"deltaY":240}'
 
 # Navigate back/forward in a specific tab
 curl -X POST http://localhost:9867/tabs/TAB_ID/back \

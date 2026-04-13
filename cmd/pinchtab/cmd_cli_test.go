@@ -58,3 +58,9 @@ func TestMouseSubCommandsRegistered(t *testing.T) {
 		}
 	}
 }
+
+func TestDragCommandRegistered(t *testing.T) {
+	if findCommand(rootCmd, "drag") == nil {
+		t.Fatal("expected drag command to be registered")
+	}
+}

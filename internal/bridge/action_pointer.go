@@ -4,12 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 )
 
 var scrollByCoordinateAction = ScrollByCoordinate
+var mouseMoveByCoordinateAction = MouseMoveByCoordinate
+var mouseDownByCoordinateAction = MouseDownByCoordinate
+var mouseUpByCoordinateAction = MouseUpByCoordinate
+
+type pointerState struct {
+	X     float64
+	Y     float64
+	Known bool
+}
+
 var scrollViewportCenter = func(ctx context.Context) (float64, float64, error) {
 	var viewport struct {
 		X float64 `json:"x"`
@@ -149,7 +160,36 @@ func (b *Bridge) actionHover(ctx context.Context, req ActionRequest) (map[string
 	return nil, fmt.Errorf("need selector, ref, nodeId, or x/y coordinates")
 }
 
-func pointerCoordinatesFromRequest(ctx context.Context, req ActionRequest) (float64, float64, error) {
+func (b *Bridge) rememberPointerPosition(tabID string, x, y float64) {
+	if b == nil || tabID == "" {
+		return
+	}
+	b.pointerMu.Lock()
+	b.pointerByTab[tabID] = pointerState{X: x, Y: y, Known: true}
+	b.pointerMu.Unlock()
+}
+
+func (b *Bridge) currentPointerPosition(tabID string) (float64, float64, bool) {
+	if b == nil || tabID == "" {
+		return 0, 0, false
+	}
+	b.pointerMu.RLock()
+	defer b.pointerMu.RUnlock()
+	state, ok := b.pointerByTab[tabID]
+	if !ok || !state.Known {
+		return 0, 0, false
+	}
+	return state.X, state.Y, true
+}
+
+func pointerTargetRequiredError(req ActionRequest, allowCurrent bool) error {
+	if allowCurrent && strings.TrimSpace(req.TabID) != "" {
+		return fmt.Errorf("no pointer position known for tab %s; move pointer first or provide selector, ref, nodeId, or x/y coordinates", req.TabID)
+	}
+	return fmt.Errorf("need selector, ref, nodeId, or x/y coordinates")
+}
+
+func (b *Bridge) pointerCoordinatesFromRequest(ctx context.Context, req ActionRequest, allowCurrent bool) (float64, float64, error) {
 	if req.HasXY {
 		return req.X, req.Y, nil
 	}
@@ -163,22 +203,28 @@ func pointerCoordinatesFromRequest(ctx context.Context, req ActionRequest) (floa
 		}
 		return PointerPointForNode(ctx, int64(node.BackendNodeID), false)
 	}
-	return 0, 0, fmt.Errorf("need selector, ref, nodeId, or x/y coordinates")
+	if allowCurrent {
+		if x, y, ok := b.currentPointerPosition(req.TabID); ok {
+			return x, y, nil
+		}
+	}
+	return 0, 0, pointerTargetRequiredError(req, allowCurrent)
 }
 
 func (b *Bridge) actionMouseMove(ctx context.Context, req ActionRequest) (map[string]any, error) {
-	x, y, err := pointerCoordinatesFromRequest(ctx, req)
+	x, y, err := b.pointerCoordinatesFromRequest(ctx, req, false)
 	if err != nil {
 		return nil, err
 	}
-	if err := MouseMoveByCoordinate(ctx, x, y); err != nil {
+	if err := mouseMoveByCoordinateAction(ctx, x, y); err != nil {
 		return nil, err
 	}
+	b.rememberPointerPosition(req.TabID, x, y)
 	return map[string]any{"moved": true, "x": x, "y": y}, nil
 }
 
 func (b *Bridge) actionMouseDown(ctx context.Context, req ActionRequest) (map[string]any, error) {
-	x, y, err := pointerCoordinatesFromRequest(ctx, req)
+	x, y, err := b.pointerCoordinatesFromRequest(ctx, req, true)
 	if err != nil {
 		return nil, err
 	}
@@ -186,14 +232,15 @@ func (b *Bridge) actionMouseDown(ctx context.Context, req ActionRequest) (map[st
 	if button == "" {
 		button = "left"
 	}
-	if err := MouseDownByCoordinate(ctx, x, y, button); err != nil {
+	if err := mouseDownByCoordinateAction(ctx, x, y, button); err != nil {
 		return nil, err
 	}
+	b.rememberPointerPosition(req.TabID, x, y)
 	return map[string]any{"down": true, "x": x, "y": y, "button": button}, nil
 }
 
 func (b *Bridge) actionMouseUp(ctx context.Context, req ActionRequest) (map[string]any, error) {
-	x, y, err := pointerCoordinatesFromRequest(ctx, req)
+	x, y, err := b.pointerCoordinatesFromRequest(ctx, req, true)
 	if err != nil {
 		return nil, err
 	}
@@ -201,19 +248,20 @@ func (b *Bridge) actionMouseUp(ctx context.Context, req ActionRequest) (map[stri
 	if button == "" {
 		button = "left"
 	}
-	if err := MouseUpByCoordinate(ctx, x, y, button); err != nil {
+	if err := mouseUpByCoordinateAction(ctx, x, y, button); err != nil {
 		return nil, err
 	}
+	b.rememberPointerPosition(req.TabID, x, y)
 	return map[string]any{"up": true, "x": x, "y": y, "button": button}, nil
 }
 
 func (b *Bridge) actionMouseWheel(ctx context.Context, req ActionRequest) (map[string]any, error) {
-	x, y, err := pointerCoordinatesFromRequest(ctx, req)
+	x, y, err := b.pointerCoordinatesFromRequest(ctx, req, true)
 	if err != nil {
 		return nil, err
 	}
-	deltaX := req.WheelDeltaX
-	deltaY := req.WheelDeltaY
+	deltaX := req.DeltaX
+	deltaY := req.DeltaY
 	if deltaX == 0 && deltaY == 0 {
 		deltaX = req.ScrollX
 		deltaY = req.ScrollY
@@ -224,6 +272,7 @@ func (b *Bridge) actionMouseWheel(ctx context.Context, req ActionRequest) (map[s
 	if err := scrollByCoordinateAction(ctx, x, y, deltaX, deltaY); err != nil {
 		return nil, err
 	}
+	b.rememberPointerPosition(req.TabID, x, y)
 	return map[string]any{"wheel": true, "x": x, "y": y, "deltaX": deltaX, "deltaY": deltaY}, nil
 }
 

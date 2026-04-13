@@ -104,21 +104,24 @@ assert_ok "snapshot"
 REF=$(find_ref_by_name "Mouse Target")
 assert_ref_found "$REF" "mouse target ref"
 
-pt_post /action "{\"kind\":\"mousemove\",\"ref\":\"${REF}\"}"
-assert_ok "mousemove on target"
+pt_post /action "{\"kind\":\"mouse-move\",\"ref\":\"${REF}\"}"
+assert_ok "mouse-move on target"
 
-pt_post /action "{\"kind\":\"mousedown\",\"ref\":\"${REF}\",\"button\":\"left\"}"
-assert_ok "mousedown on target"
+pt_post /action '{"kind":"mouse-move","x":160,"y":190}'
+assert_ok "mouse-move by coordinates without hasXY"
 
-pt_post /action "{\"kind\":\"mouseup\",\"ref\":\"${REF}\",\"button\":\"left\"}"
-assert_ok "mouseup on target"
+pt_post /action '{"kind":"mouse-down","button":"left"}'
+assert_ok "mouse-down at current pointer"
 
-pt_post /action '{"kind":"mousewheel","x":160,"y":190,"hasXY":true,"wheelDeltaY":240}'
-assert_ok "mousewheel on target coordinates"
+pt_post /action '{"kind":"mouse-up","button":"left"}'
+assert_ok "mouse-up at current pointer"
+
+pt_post /action '{"kind":"mouse-wheel","deltaY":240}'
+assert_ok "mouse-wheel at current pointer"
 
 pt_post /evaluate '{"expression":"window.mouseFixtureState.mousemoveCount"}'
 assert_ok "evaluate mousemove count"
-assert_result_jq '.result >= 1' "mousemove count incremented" "mousemove count did not increment"
+assert_result_jq '.result >= 2' "mousemove count incremented twice" "mousemove count did not increment twice"
 
 pt_post /evaluate '{"expression":"window.mouseFixtureState.mousedownCount"}'
 assert_ok "evaluate mousedown count"
@@ -139,6 +142,31 @@ assert_json_eq "$RESULT" '.result' '1' "wheel count is 1"
 pt_post /evaluate '{"expression":"window.mouseFixtureState.wheelDeltaY"}'
 assert_ok "evaluate wheel delta"
 assert_json_eq "$RESULT" '.result' '240' "wheel delta Y accumulated"
+
+end_test
+
+# ─────────────────────────────────────────────────────────────────
+start_test "pinchtab mouse current-pointer sequence"
+
+pt_post /navigate "{\"url\":\"${FIXTURES_URL}/mouse-events.html\"}"
+assert_ok "navigate"
+
+pt_post /action '{"kind":"mouse-move","x":160,"y":190}'
+assert_ok "prime pointer position"
+
+pt_post /action '{"kind":"mouse-down","button":"left"}'
+assert_ok "mouse-down without fresh target"
+
+pt_post /action '{"kind":"mouse-move","x":165,"y":195}'
+assert_ok "mouse-move while held"
+
+pt_post /action '{"kind":"mouse-up","button":"left"}'
+assert_ok "mouse-up without fresh target"
+
+pt_post /evaluate '{"expression":"window.mouseFixtureState.sequence.join(\",\")"}'
+assert_ok "evaluate pointer sequence"
+assert_json_contains "$RESULT" '.result' 'mousedown' "sequence includes mousedown"
+assert_json_contains "$RESULT" '.result' 'mouseup' "sequence includes mouseup"
 
 end_test
 

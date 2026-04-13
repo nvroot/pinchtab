@@ -148,10 +148,10 @@ Action kinds currently include:
 - `fill`
 - `press`
 - `hover`
-- `mousemove`
-- `mousedown`
-- `mouseup`
-- `mousewheel`
+- `mouse-move`
+- `mouse-down`
+- `mouse-up`
+- `mouse-wheel`
 - `focus`
 - `select`
 - `scroll`
@@ -171,7 +171,7 @@ Action targeting fields:
 - `nodeId`
 - `x` and `y`
 - `button`
-- `wheelDeltaX` and `wheelDeltaY`
+- `deltaX` and `deltaY`
 - `waitNav`
 - `dialogAction` and `dialogText`
 

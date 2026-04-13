@@ -73,10 +73,12 @@ pinchtab type <selector> <text>         # Type via key events
 pinchtab fill <selector> <text>         # Fill directly
 pinchtab press <key>                    # Press a key
 pinchtab hover [selector]               # Hover an element
-pinchtab mouse move [selector]          # Move the mouse to an element or coordinates
+pinchtab mouse move <x> <y>             # Move the mouse to coordinates
+pinchtab mouse move [selector]          # Or move to an element center
 pinchtab mouse down [selector]          # Press a mouse button
 pinchtab mouse up [selector]            # Release a mouse button
-pinchtab mouse wheel [selector]         # Dispatch wheel deltas
+pinchtab mouse wheel [dy|selector]      # Dispatch wheel deltas
+pinchtab drag <from> <to>               # Drag between targets (selector/ref or x,y)
 pinchtab focus [selector]               # Focus an element
 pinchtab scroll <selector|pixels>       # Scroll an element or the page
 pinchtab select <selector> <value>      # Select a <select> option
@@ -89,10 +91,11 @@ Low-level mouse commands are useful for drag handles, canvas-like UIs, and flows
 
 ```bash
 pinchtab mouse move e5
-pinchtab mouse down e5 --button left
-pinchtab mouse up e5 --button left
-pinchtab mouse wheel e5 --wheel-delta-y 240
+pinchtab mouse down --button left
+pinchtab mouse up --button left
+pinchtab mouse wheel 240 --dx 40
 pinchtab mouse move --x 400 --y 320
+pinchtab drag e5 400,320
 ```
 
 ## Page Analysis
