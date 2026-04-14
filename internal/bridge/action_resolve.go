@@ -316,8 +316,8 @@ func ResolveUnifiedSelector(ctx context.Context, sel selector.Selector, refCache
 	switch sel.Kind {
 	case selector.KindRef:
 		if refCache != nil {
-			if nid, ok := refCache.Refs[sel.Value]; ok {
-				return nid, nil
+			if target, ok := refCache.Lookup(sel.Value); ok {
+				return target.BackendNodeID, nil
 			}
 		}
 		return 0, fmt.Errorf("ref %s not found in snapshot cache", sel.Value)

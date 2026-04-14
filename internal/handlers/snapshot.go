@@ -189,7 +189,11 @@ func (h *Handlers) HandleSnapshot(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.Bridge.SetRefCache(resolvedTabID, &bridge.RefCache{Refs: refs, Nodes: flat})
+	h.Bridge.SetRefCache(resolvedTabID, &bridge.RefCache{
+		Refs:    refs,
+		Targets: bridge.RefTargetsFromNodes(flat),
+		Nodes:   flat,
+	})
 
 	var url, title string
 	_ = chromedp.Run(tCtx,

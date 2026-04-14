@@ -73,8 +73,8 @@ func New(b bridge.BridgeAPI, cfg *config.RuntimeConfig, p bridge.ProfileService,
 			if cache == nil {
 				return 0, false
 			}
-			nid, ok := cache.Refs[ref]
-			return nid, ok
+			target, ok := cache.Lookup(ref)
+			return target.BackendNodeID, ok
 		},
 		// DescriptorBuilder
 		func(tabID string) []semantic.ElementDescriptor {

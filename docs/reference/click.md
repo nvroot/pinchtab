@@ -20,6 +20,7 @@ pinchtab click e5
 Notes:
 
 - element refs come from `/snapshot`
+- refs returned for iframe descendants can be clicked directly; no manual frame switch is required
 - the raw action endpoint also accepts `selector`, for example `{"kind":"click","selector":"#login"}`
 - the CLI also accepts `#login`, `xpath://button`, `text:Submit`, and `find:login button`
 - `--wait-nav` exists on the top-level CLI command

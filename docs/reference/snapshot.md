@@ -2,6 +2,8 @@
 
 Get an accessibility snapshot of the current page, including element refs that can be reused by action commands.
 
+Iframe content is detected automatically during snapshot capture. Same-origin iframe descendants are included beneath the iframe owner element, and their refs can be reused directly with action commands.
+
 ```bash
 curl "http://localhost:9867/snapshot?filter=interactive"
 # CLI Alternative

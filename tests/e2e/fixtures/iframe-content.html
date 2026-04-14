@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Iframe Payment Content</title>
+</head>
+<body>
+  <h2>Payment</h2>
+  <form id="payment-form">
+    <label for="card-number">Card number</label>
+    <input type="text" id="card-number" name="cardNumber">
+    <button type="button" id="pay-button">Pay</button>
+  </form>
+  <p id="payment-result"></p>
+
+  <script>
+    document.getElementById('pay-button').addEventListener('click', function() {
+      const value = document.getElementById('card-number').value;
+      document.getElementById('payment-result').textContent = 'PAYMENT_SUBMITTED_' + value;
+    });
+  </script>
+</body>
+</html>

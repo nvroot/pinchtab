@@ -172,6 +172,29 @@ require_ref "textbox" "Notes" NOTES_REF && {
 
 end_test
 
+# ─────────────────────────────────────────────────────────────────
+start_test "iframe: snapshot refs support fill and click inside iframe"
+
+navigate_fixture "iframe.html"
+fresh_snapshot
+
+assert_json_exists "$RESULT" '.nodes[] | select(.name == "payment-frame")' "snapshot includes iframe owner"
+
+require_ref "textbox" "Card number" CARD_REF && \
+require_ref "button" "Pay" PAY_REF && {
+  pt_post /action -d "{\"kind\":\"fill\",\"ref\":\"${CARD_REF}\",\"text\":\"4111111111111111\"}"
+  assert_ok "fill iframe textbox by ref"
+
+  pt_post /action -d "{\"kind\":\"click\",\"ref\":\"${PAY_REF}\"}"
+  assert_ok "click iframe button by ref"
+
+  pt_post /evaluate -d '{"expression":"(() => { const frame = document.getElementById(\"payment-frame\"); const doc = frame && frame.contentDocument; const result = doc && doc.getElementById(\"payment-result\"); return result ? result.textContent : \"\"; })()"}'
+  assert_ok "evaluate iframe result"
+  assert_json_eq "$RESULT" '.result' 'PAYMENT_SUBMITTED_4111111111111111' "iframe form submitted via refs"
+}
+
+end_test
+
 # Regression test for GitHub issue #236: press action was typing key names
 # as literal text instead of dispatching keyboard events.
 

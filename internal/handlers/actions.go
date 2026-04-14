@@ -184,8 +184,8 @@ func (h *Handlers) HandleAction(w http.ResponseWriter, r *http.Request) {
 			req.Selector = ""
 			cache := h.Bridge.GetRefCache(resolvedTabID)
 			if cache != nil {
-				if nid, ok := cache.Refs[sel.Value]; ok {
-					req.NodeID = nid
+				if target, ok := cache.Lookup(sel.Value); ok {
+					req.NodeID = target.BackendNodeID
 				}
 			}
 			if req.NodeID == 0 {
@@ -242,8 +242,8 @@ func (h *Handlers) HandleAction(w http.ResponseWriter, r *http.Request) {
 						req.Ref = result.BestRef
 						cache := h.Bridge.GetRefCache(resolvedTabID)
 						if cache != nil {
-							if nid, ok := cache.Refs[result.BestRef]; ok {
-								req.NodeID = nid
+							if target, ok := cache.Lookup(result.BestRef); ok {
+								req.NodeID = target.BackendNodeID
 							}
 						}
 					}
@@ -303,8 +303,8 @@ func (h *Handlers) HandleAction(w http.ResponseWriter, r *http.Request) {
 				recordStaleRefRetry()
 				h.refreshRefCache(tCtx, resolvedTabID)
 				if cache := h.Bridge.GetRefCache(resolvedTabID); cache != nil {
-					if nid, ok := cache.Refs[req.Ref]; ok {
-						req.NodeID = nid
+					if target, ok := cache.Lookup(req.Ref); ok {
+						req.NodeID = target.BackendNodeID
 					}
 				}
 			}
@@ -535,8 +535,8 @@ func (h *Handlers) handleActionsBatch(w http.ResponseWriter, r *http.Request, re
 				action.Selector = ""
 				cache := h.Bridge.GetRefCache(resolvedTabID)
 				if cache != nil {
-					if nid, ok := cache.Refs[sel.Value]; ok {
-						action.NodeID = nid
+					if target, ok := cache.Lookup(sel.Value); ok {
+						action.NodeID = target.BackendNodeID
 					}
 				}
 				if action.NodeID == 0 {
@@ -598,8 +598,8 @@ func (h *Handlers) handleActionsBatch(w http.ResponseWriter, r *http.Request, re
 							action.Ref = findResult.BestRef
 							cache := h.Bridge.GetRefCache(resolvedTabID)
 							if cache != nil {
-								if nid, ok := cache.Refs[findResult.BestRef]; ok {
-									action.NodeID = nid
+								if target, ok := cache.Lookup(findResult.BestRef); ok {
+									action.NodeID = target.BackendNodeID
 								}
 							}
 						}
@@ -689,8 +689,8 @@ func (h *Handlers) handleActionsBatch(w http.ResponseWriter, r *http.Request, re
 					recordStaleRefRetry()
 					h.refreshRefCache(tCtx, resolvedTabID)
 					if cache := h.Bridge.GetRefCache(resolvedTabID); cache != nil {
-						if nid, ok := cache.Refs[action.Ref]; ok {
-							action.NodeID = nid
+						if target, ok := cache.Lookup(action.Ref); ok {
+							action.NodeID = target.BackendNodeID
 						}
 					}
 				}
@@ -814,8 +814,8 @@ func (h *Handlers) HandleMacro(w http.ResponseWriter, r *http.Request) {
 				step.Selector = ""
 				cache := h.Bridge.GetRefCache(resolvedTabID)
 				if cache != nil {
-					if nid, ok := cache.Refs[sel.Value]; ok {
-						step.NodeID = nid
+					if target, ok := cache.Lookup(sel.Value); ok {
+						step.NodeID = target.BackendNodeID
 					}
 				}
 				if step.NodeID == 0 {
@@ -880,8 +880,8 @@ func (h *Handlers) HandleMacro(w http.ResponseWriter, r *http.Request) {
 							step.Ref = findResult.BestRef
 							cache := h.Bridge.GetRefCache(resolvedTabID)
 							if cache != nil {
-								if nid, ok := cache.Refs[findResult.BestRef]; ok {
-									step.NodeID = nid
+								if target, ok := cache.Lookup(findResult.BestRef); ok {
+									step.NodeID = target.BackendNodeID
 								}
 							}
 						}
@@ -956,8 +956,8 @@ func (h *Handlers) HandleMacro(w http.ResponseWriter, r *http.Request) {
 					recordStaleRefRetry()
 					h.refreshRefCache(tCtx, resolvedTabID)
 					if cache := h.Bridge.GetRefCache(resolvedTabID); cache != nil {
-						if nid, ok := cache.Refs[step.Ref]; ok {
-							step.NodeID = nid
+						if target, ok := cache.Lookup(step.Ref); ok {
+							step.NodeID = target.BackendNodeID
 						}
 					}
 				}
@@ -1164,5 +1164,9 @@ func (h *Handlers) refreshRefCache(ctx context.Context, tabID string) {
 		return
 	}
 	flat, refs := bridge.BuildSnapshot(nodes, bridge.FilterInteractive, -1)
-	h.Bridge.SetRefCache(tabID, &bridge.RefCache{Refs: refs, Nodes: flat})
+	h.Bridge.SetRefCache(tabID, &bridge.RefCache{
+		Refs:    refs,
+		Targets: bridge.RefTargetsFromNodes(flat),
+		Nodes:   flat,
+	})
 }
