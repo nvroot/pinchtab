@@ -71,6 +71,42 @@ func TestRefCacheLookup(t *testing.T) {
 	}
 }
 
+func TestRefTargetsFromNodes(t *testing.T) {
+	nodes := []A11yNode{
+		{
+			Ref:            "e0",
+			NodeID:         100,
+			FrameID:        "frame-1",
+			FrameURL:       "https://example.com/embed",
+			FrameName:      "embed",
+			ChildFrameID:   "frame-1-child",
+			ChildFrameURL:  "https://example.com/embed/child",
+			ChildFrameName: "nested",
+		},
+		{
+			Ref:    "e1",
+			NodeID: 200,
+		},
+	}
+
+	targets := RefTargetsFromNodes(nodes)
+	if len(targets) != 2 {
+		t.Fatalf("expected 2 targets, got %d", len(targets))
+	}
+	if targets["e0"].BackendNodeID != 100 {
+		t.Fatalf("e0 backend node = %d", targets["e0"].BackendNodeID)
+	}
+	if targets["e0"].FrameID != "frame-1" {
+		t.Fatalf("e0 frame id = %q", targets["e0"].FrameID)
+	}
+	if targets["e0"].ChildFrameID != "frame-1-child" {
+		t.Fatalf("e0 child frame id = %q", targets["e0"].ChildFrameID)
+	}
+	if targets["e1"].BackendNodeID != 200 {
+		t.Fatalf("e1 backend node = %d", targets["e1"].BackendNodeID)
+	}
+}
+
 func TestTabManagerRemoteAllocatorInitialization(t *testing.T) {
 	// Test that TabManager can be initialized without a valid browser context.
 	// This is the case for remote allocators where the browser context is

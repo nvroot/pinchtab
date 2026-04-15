@@ -62,15 +62,38 @@ func PointerPointForNode(ctx context.Context, backendNodeID int64, requireTopMos
 	const probeJS = `function() {
 		const r = this.getBoundingClientRect();
 		const style = window.getComputedStyle(this);
-		const x = r.left + (r.width / 2);
-		const y = r.top + (r.height / 2);
-		const inViewport = x >= 0 && y >= 0 && x <= window.innerWidth && y <= window.innerHeight;
+		const localX = r.left + (r.width / 2);
+		const localY = r.top + (r.height / 2);
+		let x = localX;
+		let y = localY;
+		let topWindow = window;
+		try {
+			let current = window;
+			while (current && current.parent && current !== current.parent) {
+				const frameEl = current.frameElement;
+				if (!frameEl) {
+					break;
+				}
+				const frameRect = frameEl.getBoundingClientRect();
+				x += frameRect.left;
+				y += frameRect.top;
+				current = current.parent;
+				topWindow = current;
+			}
+		} catch (e) {
+			// Cross-origin ancestors can block frame traversal. In that case we keep
+			// the frame-local coordinates and let higher layers decide whether that
+			// target is safely actionable.
+		}
+		const viewportWidth = topWindow && topWindow.innerWidth ? topWindow.innerWidth : window.innerWidth;
+		const viewportHeight = topWindow && topWindow.innerHeight ? topWindow.innerHeight : window.innerHeight;
+		const inViewport = x >= 0 && y >= 0 && x <= viewportWidth && y <= viewportHeight;
 		const visible = !!style && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0;
 		const pointerEvent = style ? String(style.pointerEvents || '') : '';
 		let occluded = false;
 		let topTag = '';
-		if (inViewport) {
-			const top = document.elementFromPoint(x, y);
+		if (localX >= 0 && localY >= 0 && localX <= window.innerWidth && localY <= window.innerHeight) {
+			const top = document.elementFromPoint(localX, localY);
 			if (top) {
 				topTag = String(top.tagName || '').toLowerCase();
 				const related = top === this || this.contains(top) || top.contains(this);
