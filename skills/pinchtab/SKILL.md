@@ -120,13 +120,28 @@ pinchtab tab close <tab-id>                         # Close a tab — use this t
 pinchtab instance navigate <instance-id> <url>
 ```
 
-**Tab workflow** - Capture tab ID once, reuse for all commands:
+**Tab workflow** — most commands target the active tab by default, so single-tab flows need no plumbing:
 ```bash
-export PINCHTAB_TAB=$(pinchtab nav http://example.com)
-pinchtab snap -i -c    # Uses PINCHTAB_TAB automatically
-pinchtab click e5      # Same tab
-pinchtab text          # Same tab
+pinchtab nav http://example.com
+pinchtab snap -i -c      # active tab
+pinchtab click e5        # active tab
+pinchtab text            # active tab
 ```
+
+When you need to pin to a specific tab (parallel tabs, long-running flows, or shell-isolated
+runners like agent tool calls where env vars don't persist across invocations), capture the
+tab ID with `--print-tab-id` and pass `--tab` on every subsequent command:
+```bash
+TAB_ID=$(pinchtab nav http://example.com --print-tab-id)
+pinchtab --tab "$TAB_ID" snap -i -c
+pinchtab --tab "$TAB_ID" click e5
+pinchtab --tab "$TAB_ID" text
+```
+
+Within a single shell session you can also `export PINCHTAB_TAB=$(pinchtab nav URL --print-tab-id)`
+and drop the `--tab` flag. This does **not** survive across separate shell invocations (each
+`Bash` tool call in an agent runs a fresh shell), so prefer explicit `--tab` for agent workflows.
+
 Priority: `--tab <id>` flag > `PINCHTAB_TAB` env var > active tab.
 
 ### Observation
@@ -152,7 +167,11 @@ Guidance:
 - `snap -i -c` is the default for finding actionable refs.
 - `snap -d` is the default follow-up snapshot for multi-step flows.
 - `text` is the default for reading articles, dashboards, reports, or confirmation messages.
-- `find --ref-only` is useful when the page is large and you already know the semantic target.
+- **`pinchtab find <query>`** is the direct route when you already know the semantic target
+  (e.g. "login button", "email input", "accept cookies link") — skips the full snapshot and
+  returns a ranked match with its ref. Pair with `--ref-only` on large/dense pages to get just
+  the ref string for piping straight into `click` / `fill` / `type`. Prefer `find` over
+  `snap -i -c` + visual scan whenever you can describe the target in a phrase.
 - Refs from `snap -i` and full `snap` use different numbering. Do not mix them — if you snapshot with `-i`, use those refs. If you re-snapshot without `-i`, get fresh refs before acting.
 
 ### Interaction
@@ -197,6 +216,22 @@ Rules:
 - For the `scroll` action via HTTP, use `"scrollX"` / `"scrollY"` for pixel deltas, or `"selector"` to scroll an element into view. Example: `{"kind":"scroll","scrollY":1500}` or `{"kind":"scroll","selector":"#footer"}`. The `x`/`y` fields are target viewport coordinates, not scroll deltas.
 - The download HTTP endpoint (`GET /download?url=...` or `GET /tabs/TAB_ID/download?url=...`) returns JSON `{contentType, data (base64), size, url}`, not raw bytes. Decode `data` with base64 to get the file. Only `http`/`https` URLs are allowed. Private/internal hosts are blocked unless listed in `security.downloadAllowedDomains`.
 
+### Waiting
+
+Use `wait` when the DOM settles asynchronously — spinners, toasts, XHR-driven content.
+
+```bash
+pinchtab wait <selector>                            # Element to appear (default visible)
+pinchtab wait <selector> --state hidden             # Element to disappear
+pinchtab wait --text "Order confirmed"              # Text to appear
+pinchtab wait --not-text "Loading..."               # Text to disappear (spinner/toast dismiss)
+pinchtab wait --url "**/dashboard"                  # URL glob match
+pinchtab wait --load networkidle                    # Network idle
+pinchtab wait 500                                   # Fixed delay in ms (last resort)
+```
+
+Default timeout 10s, max 30s via `--timeout <ms>`. Prefer `--not-text` / `--state hidden` over polling.
+
 ### Export, debug, and verification
 
 ```bash
@@ -231,6 +266,12 @@ Use curl when CLI unavailable. Key endpoints on instance port (e.g. 9867):
 - `POST /navigate` with `{"url":"..."}`
 - `GET /snapshot?filter=interactive&format=compact`
 - `POST /action` with `{"kind":"fill","selector":"e3","text":"..."}`
+- `POST /actions` with a batch of actions — runs them in one round-trip. Body accepts either
+  an array `[{"kind":"fill",...},{"kind":"click",...}]` or an envelope
+  `{"actions":[...],"stopOnError":true,"tabId":"..."}`. Use this for tight form flows (fill +
+  fill + click submit) to cut round-trip latency. Set `stopOnError:true` to halt on the first
+  failure; the response contains a per-step `{index, success, result?, error?}` array.
+  Tab-scoped variant: `POST /tabs/TAB_ID/actions`.
 - `GET /text`
 - `POST /solve` with `{"maxAttempts": 3}`
 
