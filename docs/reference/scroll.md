@@ -8,6 +8,8 @@ curl -X POST http://localhost:9867/action \
   -d '{"kind":"scroll","scrollY":800}'
 # CLI Alternative
 pinchtab scroll down
+pinchtab scroll down --snap        # scroll and output snapshot
+pinchtab scroll 800 --snap-diff    # scroll and output snapshot diff
 # Response
 {
   "success": true,
@@ -19,6 +21,8 @@ pinchtab scroll down
 
 Notes:
 
+- use `--snap` to output an interactive snapshot after scrolling
+- use `--snap-diff` to output only the changes from the previous snapshot
 - the top-level CLI also accepts a pixel value such as `pinchtab scroll 800`
 - the raw API uses `scrollY` and `scrollX` for page scrolling
 - the raw API can also target an element with `ref` or `selector`

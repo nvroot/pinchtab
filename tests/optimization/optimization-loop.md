@@ -40,15 +40,13 @@ environment still behaves as expected.
 
 Source of truth:
 
-- `scripts/baseline.sh`
+- `tests/tools/scripts/baseline.sh`
 
 Run baseline directly:
 
 ```bash
-cd tests/benchmark
-./scripts/run-optimization.sh
-./scripts/baseline.sh
-./scripts/finalize-report.sh "$(cat ./results/current_baseline_report.txt)"
+# From repo root:
+./dev opt baseline
 ```
 
 ### When to run baseline

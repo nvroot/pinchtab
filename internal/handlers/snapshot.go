@@ -324,6 +324,25 @@ func (h *Handlers) HandleSnapshot(w http.ResponseWriter, r *http.Request) {
 
 	if doDiff && prevNodes != nil {
 		added, changed, removed := bridge.DiffSnapshot(prevNodes, flat)
+
+		// Compact diff format: show all nodes with [+]/[~] markers
+		if format == "compact" {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(200)
+			_, _ = fmt.Fprintf(w, "# %s | %s | %d nodes | +%d ~%d -%d",
+				title, url, len(flat), len(added), len(changed), len(removed))
+			if truncated {
+				_, _ = fmt.Fprintf(w, " (truncated to ~%d tokens)", maxTokens)
+			}
+			_, _ = w.Write([]byte("\n"))
+			content := bridge.FormatSnapshotCompactDiff(flat, added, changed, removed)
+			if wrapContent {
+				content = h.IDPIGuard.WrapContent(content, url)
+			}
+			_, _ = w.Write([]byte(content))
+			return
+		}
+
 		httpx.JSON(w, 200, map[string]any{
 			"url":     url,
 			"title":   title,

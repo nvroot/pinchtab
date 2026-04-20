@@ -1,10 +1,12 @@
 package actions
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 
 	"github.com/pinchtab/pinchtab/internal/cli/apiclient"
+	"github.com/pinchtab/pinchtab/internal/cli/output"
 	"github.com/pinchtab/pinchtab/internal/selector"
 	"github.com/spf13/cobra"
 )
@@ -48,5 +50,22 @@ func Text(client *http.Client, base, token string, cmd *cobra.Command, args []st
 		}
 	}
 
-	apiclient.DoGet(client, base, token, "/text", params)
+	// Default to terse output (just text); --json for full response
+	jsonOutput, _ := cmd.Flags().GetBool("json")
+	if jsonOutput {
+		apiclient.DoGet(client, base, token, "/text", params)
+		return
+	}
+
+	// Terse mode: print just the text content
+	body := apiclient.DoGetRaw(client, base, token, "/text", params)
+	var result struct {
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		// Not JSON, print raw
+		output.Value(string(body))
+		return
+	}
+	output.Value(result.Text)
 }

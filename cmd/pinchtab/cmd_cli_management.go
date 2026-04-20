@@ -21,7 +21,7 @@ var healthCmd = &cobra.Command{
 	Short: "Check server health",
 	Run: func(cmd *cobra.Command, args []string) {
 		runCLI(func(rt cliRuntime) {
-			browseractions.Health(rt.client, rt.base, rt.token)
+			browseractions.Health(rt.client, rt.base, rt.token, cmd)
 		})
 	},
 }

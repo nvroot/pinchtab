@@ -105,8 +105,7 @@ func PrintStartBanner(w io.Writer, lane Lane, benchmarkDir string, groups []int,
 
 	totalSteps := 0
 	for _, g := range selected {
-		var steps []groupStep
-		steps = loadGroupSteps(benchmarkDir, g)
+		steps := loadGroupSteps(benchmarkDir, g)
 		_, _ = fmt.Fprintf(w, "\n  Group %d — %d step(s):\n", g, len(steps))
 		for _, s := range steps {
 			_, _ = fmt.Fprintf(w, "    %d.%d  %s\n", s.Group, s.Step, s.Title)

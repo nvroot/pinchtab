@@ -25,6 +25,7 @@ pinchtab nav <url> --tab <id>           # Reuse a specific tab
 pinchtab nav <url> --new-tab            # Explicitly force a new tab
 pinchtab nav <url> --block-images       # Block images for this navigation
 pinchtab nav <url> --block-ads          # Block ads for this navigation
+pinchtab nav <url> --snap               # Navigate and output interactive snapshot
 pinchtab quick <url>                    # Navigate and take a snapshot
 pinchtab back                           # Go back in the active tab
 pinchtab back --tab <id>                # Go back in a specific tab
@@ -73,6 +74,7 @@ pinchtab frame main                    # Return selector scope to the top docume
 pinchtab click [selector]               # Click an element or coordinates with --x/--y
 pinchtab click --css <selector>         # Force CSS selector mode
 pinchtab click --wait-nav <selector>    # Click and wait for navigation
+pinchtab click --snap <selector>        # Click and output interactive snapshot
 pinchtab dblclick [selector]            # Double-click
 pinchtab type <selector> <text>         # Type via key events
 pinchtab fill <selector> <text>         # Fill directly
@@ -86,6 +88,8 @@ pinchtab mouse wheel [dy|selector]      # Dispatch wheel deltas
 pinchtab drag <from> <to>               # Drag between targets (selector/ref or x,y)
 pinchtab focus [selector]               # Focus an element
 pinchtab scroll <selector|pixels>       # Scroll an element or the page
+pinchtab scroll down --snap             # Scroll and output snapshot
+pinchtab scroll 800 --snap-diff         # Scroll and output snapshot diff
 pinchtab select <selector> <value>      # Select a <select> option
 pinchtab check <selector>               # Check a checkbox or radio
 pinchtab uncheck <selector>             # Uncheck a checkbox or radio

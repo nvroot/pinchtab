@@ -3,16 +3,42 @@ package actions
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pinchtab/pinchtab/internal/cli"
-	"github.com/pinchtab/pinchtab/internal/cli/apiclient"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/pinchtab/pinchtab/internal/cli"
+	"github.com/pinchtab/pinchtab/internal/cli/apiclient"
+	"github.com/pinchtab/pinchtab/internal/cli/output"
+	"github.com/spf13/cobra"
 )
 
-func Health(client *http.Client, base, token string) {
-	apiclient.DoGet(client, base, token, "/health", nil)
+func Health(client *http.Client, base, token string, cmd *cobra.Command) {
+	jsonOutput, _ := cmd.Flags().GetBool("json")
+	if jsonOutput {
+		apiclient.DoGet(client, base, token, "/health", nil)
+		return
+	}
+
+	// Terse: "ok" or "degraded: <reason>"
+	body := apiclient.DoGetRaw(client, base, token, "/health", nil)
+	var result map[string]any
+	if err := json.Unmarshal(body, &result); err != nil {
+		output.Value("ok")
+		return
+	}
+	status, _ := result["status"].(string)
+	if status == "ok" {
+		output.Value("ok")
+	} else {
+		reason, _ := result["reason"].(string)
+		if reason != "" {
+			output.Value("degraded: " + reason)
+		} else {
+			output.Value(status)
+		}
+	}
 }
 
 func Instances(client *http.Client, base, token string) {
