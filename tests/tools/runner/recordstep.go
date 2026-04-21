@@ -314,7 +314,7 @@ func collectDockerStats(benchmarkType string) map[string]any {
 		return nil
 	}
 
-	cmd := exec.Command("docker", "stats", "--no-stream", "--no-trunc",
+	cmd := exec.Command("docker", "stats", "--no-stream", "--no-trunc", // #nosec G204 -- container name from test config
 		"--format", "{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}\t{{.PIDs}}",
 		container)
 	output, err := cmd.Output()

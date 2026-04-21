@@ -243,7 +243,7 @@ func appendCommandLog(path, command string, exitCode int, output string) {
 func recordUsage(toolsDir, reportFile string, runner Runner) {
 	usage := runner.Usage()
 	script := filepath.Join(toolsDir, "scripts", "record-run-usage.sh")
-	cmd := exec.Command(script,
+	cmd := exec.Command(script, // #nosec G204 -- script path is constructed from known toolsDir
 		"--report-file", reportFile,
 		"--provider", runner.Provider(),
 		"--source", runner.Source(),

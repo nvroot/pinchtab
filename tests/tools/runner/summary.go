@@ -213,7 +213,7 @@ func trimOneLine(s string, max int) string {
 // cmd.Run() which silently discarded the summary output — this is the fix.
 func runFinalizeReport(toolsDir, reportFile string, stdout, stderr io.Writer) {
 	script := filepath.Join(toolsDir, "scripts", "finalize-report.sh")
-	cmd := exec.Command(script, reportFile)
+	cmd := exec.Command(script, reportFile) // #nosec G204 -- script path is constructed from known toolsDir
 	cmd.Dir = toolsDir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

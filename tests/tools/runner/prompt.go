@@ -169,7 +169,7 @@ func DownloadAgentBrowserSkill(repoRoot, toolsDir string) (string, error) {
 	skillFile := filepath.Join(skillDir, "SKILL.md")
 
 	wrapper := filepath.Join(toolsDir, "scripts", "ab")
-	cmd := exec.Command(wrapper, "skills", "get", "agent-browser", "--full")
+	cmd := exec.Command(wrapper, "skills", "get", "agent-browser", "--full") // #nosec G204 -- wrapper path is constructed from known toolsDir
 	cmd.Dir = toolsDir
 	output, err := cmd.Output()
 	if err != nil {
